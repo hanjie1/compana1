@@ -45,7 +45,6 @@ struct fadc_data_struct
 #define RAW_MODE 1
 #define PULSE_RAW_MODE 2
 #define PULSE_INT_MODE 3
-#define MAXRAW  500
 #define MAXHIT  10
 
 int data_type_4=0;
@@ -53,13 +52,12 @@ int data_type_6=0;
 int data_type_7=0;
 int data_type_8=0;
 
-Int_t nsamples=0;
-Int_t trignum=0;
-Int_t nrawdata=0;
-unsigned int mychan=0;
-Int_t frawdata[MAXRAW]={0};
-int ntdc=0;
-int ftdc[MAXHIT]={0};
+Int_t nsamples = 0;
+Int_t trignum = 0;
+Int_t nrawdata = 0;
+unsigned int mychan = 0;
+int ftdc_nhit[16] = {0};
+unsigned int oldchan=-1;
 
 int GetFadcMode(){
     int mode = -1;    
@@ -72,7 +70,7 @@ int GetFadcMode(){
 void faDataDecode(unsigned int data)
 { 
 
-  int i_print = 1;
+  int i_print = 0;
   static unsigned int type_last = 15;   /* initialize to type FILLER WORD */
   static unsigned int time_last = 0;
   static unsigned int iword=0;
@@ -174,6 +172,18 @@ void faDataDecode(unsigned int data)
       fadc_data.chan = (data & 0x7800000) >> 23;
       fadc_data.width = (data & 0xFFF);
           nsamples = fadc_data.width;
+
+      if(fadc_data.chan!=oldchan){
+		nrawdata=0;
+		oldchan=fadc_data.chan;
+	  }
+	  if(fadc_data.chan<FADC_NCHAN){
+	     fadc_nhit[fadc_data.chan]++;
+	  }
+	  else{
+        printf("FADC: Something wrong here! chan %d > FADC_NCHAN (%d)\n",fadc_data.chan+1,FADC_NCHAN);
+	  }
+
       if( i_print )
         printf("%8X - WINDOW RAW DATA - chan = %d   nsamples = %d\n",
            data, fadc_data.chan, fadc_data.width);
@@ -193,14 +203,14 @@ void faDataDecode(unsigned int data)
            data, fadc_data.valid_1, fadc_data.chan,
                    fadc_data.adc_1,
            fadc_data.valid_2, fadc_data.adc_2);
-          if ((nrawdata < MAXRAW-1) && (fadc_data.chan == mychan)) {
-        frawdata[nrawdata] = fadc_data.adc_1;
+          if ((nrawdata < MAXRAW) && (fadc_data.chan < FADC_NCHAN)) {
+        frawdata[fadc_data.chan][nrawdata] = fadc_data.adc_1;
             nrawdata++;
-        frawdata[nrawdata] = fadc_data.adc_2;
+        frawdata[fadc_data.chan][nrawdata] = fadc_data.adc_2;
             nrawdata++;
             if (i_print) printf("Found chan %d  data = 0x%x 0x%x  numraw = %d\n",mychan,fadc_data.adc_1,fadc_data.adc_2,nrawdata);
       } else {
-            if (nrawdata >= MAXRAW) printf("Warning: Decode:  too many raw data words ?\n");
+            if (nrawdata > MAXRAW) printf("Warning: Decode:  too many raw data words ?\n");
       }
     }
       break;
@@ -221,6 +231,13 @@ void faDataDecode(unsigned int data)
       fadc_data.chan = (data & 0x7800000) >> 23;
       fadc_data.pulse_num = (data & 0x600000) >> 21;
       fadc_data.thres_bin = (data & 0x3FF);
+	  if(fadc_data.chan<FADC_NCHAN){
+	     fadc_nhit[fadc_data.chan]++;
+	  }
+	  else{
+        printf("FADC: Something wrong here! chan %d > FADC_NCHAN (%d)\n",fadc_data.chan+1,FADC_NCHAN);
+	  }
+
       if( i_print )
         printf("%8X - PULSE RAW DATA - chan = %d   pulse # = %d   threshold bin = %d\n",
            data, fadc_data.chan, fadc_data.pulse_num, fadc_data.thres_bin);
@@ -248,6 +265,19 @@ void faDataDecode(unsigned int data)
       fadc_data.quality = (data & 0x180000) >> 19;
       fadc_data.integral = (data & 0x7FFFF);
 
+	  if(fadc_data.chan<FADC_NCHAN){
+	     fadc_nhit[fadc_data.chan]++;
+		 if(fadc_nhit[fadc_data.chan]==1) fadc_int[fadc_data.chan]=fadc_data.integral;
+		 if(fadc_nhit[fadc_data.chan]==2) fadc_int_1[fadc_data.chan]=fadc_data.integral;
+		 if(fadc_nhit[fadc_data.chan]>MAXHIT)
+		   printf("FADC:  Too many ADC hits (%d hits) in chan %d\n",fadc_nhit[fadc_data.chan],fadc_data.chan);
+		 if(fadc_nhit[fadc_data.chan] != ftdc_nhit[fadc_data.chan])
+		   printf("FADC:  Warning:  TDC hits %d is not equal to ADC hits %d\n",fadc_nhit[fadc_data.chan],ftdc_nhit[fadc_data.chan]);
+	  }
+	  else{
+        printf("FADC: Something wrong here! ADC chan %d > FADC_NCHAN (%d)\n",fadc_data.chan+1,FADC_NCHAN);
+	  }
+
       if( i_print )
     printf("%8X - PULSE INTEGRAL - chan = %d   pulse # = %d   quality = %d   integral = %d\n",
            data, fadc_data.chan, fadc_data.pulse_num,
@@ -259,11 +289,18 @@ void faDataDecode(unsigned int data)
       fadc_data.pulse_num = (data & 0x600000) >> 21;
       fadc_data.quality = (data & 0x180000) >> 19;
       fadc_data.time = (data & 0xFFFF);
-      if ( (ntdc < MAXHIT-1) && (fadc_data.chan == mychan) ) {
-    ftdc[ntdc++] = fadc_data.time;
-      } else {
-        if (ntdc >= MAXHIT) printf("Warning: Decoder: too many hits in ftdc ?\n");
-      }
+
+	  if(fadc_data.chan<FADC_NCHAN){
+	     ftdc_nhit[fadc_data.chan]++;
+		 if(ftdc_nhit[fadc_data.chan]==1) fadc_time[fadc_data.chan]=fadc_data.time;
+		 if(ftdc_nhit[fadc_data.chan]==2) fadc_time_1[fadc_data.chan]=fadc_data.time;
+		 if(ftdc_nhit[fadc_data.chan]>MAXHIT)
+		   printf("FADC:  Too many TDC hits (%d hits) in chan %d\n",ftdc_nhit[fadc_data.chan],fadc_data.chan);
+	  }
+	  else{
+        printf("FADC: Something wrong here! TDC chan %d > FADC_NCHAN (%d)\n",fadc_data.chan+1,FADC_NCHAN);
+	  }
+
       if( i_print )
     printf("%8X - PULSE TIME - chan = %d   pulse # = %d   quality = %d   time = %d\n",
            data, fadc_data.chan, fadc_data.pulse_num,

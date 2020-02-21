@@ -11,48 +11,25 @@
 #include "TString.h"
 #include "TBranch.h"
 #include "TH1.h"
+#include "SetParams.h"
+#include "SetTreeVars.h"
 #include "Fadc250Decode.h"
 #include "TIDecode.h"
 
 using namespace std;
 
-#define MAX_BLOCK_SIZE 255
-#define MAX_ROCS       2
-#define VTP_ROC        3      //VTP ROC ID
-#define TI_ROC         1      //Physics modules (FADC, VETROC, Scaler) ROC ID
-#define FIRSTWORD_VETROC 0xb0b0b0b4
-#define FIRSTWORD_FADC   0xb0b0b0b5
-#define FIRSTWORD_SCALER 0xb0b0b0b6
-
-#define NBANK		   3
-#define FADC_BANK      3
-#define VETROC_BANK    4
-#define SCALER_BANK    6
-
+// global parameters (eg. maxroc, max fadc channels ...) are set in SetParams.h
+// tree variables are set in SetTreeVars.h
 
 void ClearTreeVar();
-
-//global variables for tree
-int tHelicity;  //TS6 bit, helicity level
-int tMPS;	   //TS5 bit, TSettle level
-int evtype;    // event type;
- /*** FADC tree variable ***/
-int fadc_mode;                // FADC mode
-Int_t fadc_int[16];	          // ADC integral for the first hit per channel
-Int_t fadc_time[16]; 		  // pulse time for the first hit per channel
-Int_t fadc_int_1[16];	      // ADC integral for the second hit per channel 
-Int_t fadc_time_1[16]; 		  // pulse time for the second hit per channel
-Int_t fadc_nhit[16];	      // number of hits per channel
-
-
 bool verbose = false; 
 
-int main (int argc, char **argv)
+int main ()
 {
-
-  int plen, i=0, nROC,  indx, bt, dt, blk, handle, nevents, status, nWords, version;
+  int run_number=0;
+  int nROC,  indx, bt, dt, blk, handle, nevents, status, nWords, version;
   int num;
-  int pe, ptb, pr;
+  int pe;
   Int_t tbLen, rocLen[MAX_ROCS], rocID[MAX_ROCS];
   Int_t rbankLen[NBANK],rbankTag[NBANK];
   uint32_t *buf, dLen, bufLen;
@@ -60,40 +37,11 @@ int main (int argc, char **argv)
   bool eventbyevent = true; 
   int maxevents = 1e9;
   Int_t totalmax=1000;
+  bool firstevent = true;
 
-  if (argc < 2) 
-  {
-    printf("Incorrect number of arguments:\n");
-    printf("  usage: %s <filename> [-t -r]\n", argv[0]);
-    printf("  optional: -t Print Trigger Bank\n");
-    printf("            -r Print ROC Banks\n");
-    printf("            -v Print event by event\n");
-    exit(-1);
-  }
-
-  if (argc > 2) 
-  {
-    maxevents = atoi(argv[2]);
-  }
-  if (argc > 3)
-  {
-    if(strncmp(argv[3],"-t",2)==0) ptb = 1;
-    if(strncmp(argv[3],"-r",2)==0) pr = 1;
-    if(strncmp(argv[3],"-v",2)==0) verbose = 1;
-  }
-
-  if (argc > 4) 
-  {
-    if(strncmp(argv[4],"-t",2)==0) ptb = 1;
-    if(strncmp(argv[4],"-r",2)==0) pr = 1;
-    if(strncmp(argv[4],"-v",2)==0) verbose = true;
-  }
-
-
+  cout<<"Which run? ";
+  cin>>run_number;
   // Initialize root and output 
-  TROOT vetrocana("vetrocroot","Edet VETROC analysis");
-  int run_number=0;
-  run_number=atoi(argv[1]);
   TString outfile=Form("Rootfiles/eDet_%d.root",run_number);
 
   TFile *hfile = new TFile(outfile,"RECREATE","e detector data");
@@ -104,11 +52,11 @@ int main (int argc, char **argv)
   T->Branch("helicity", &tHelicity, "tHelicity/I"); 
   T->Branch("MPS", &tMPS, "tMPS/I"); 
   T->Branch("fadc_mode", &fadc_mode, "fadc_mode/I"); 
-  T->Branch("fadc_a", fadc_int, "fadc_int[16]/I"); 
-  T->Branch("fadc_t", fadc_time, "fadc_time[16]/I"); 
-  T->Branch("fadc_a1", fadc_int_1, "fadc_int_1[16]/I"); 
-  T->Branch("fadc_t1", fadc_time_1, "fadc_time_1[16]/I"); 
-  T->Branch("fadc_nhit", fadc_nhit, "fadc_nhit[16]/I"); 
+  T->Branch("fadc_a", fadc_int, Form("fadc_int[%i]/I",FADC_NCHAN)); 
+  T->Branch("fadc_t", fadc_time, Form("fadc_time[%i]/I",FADC_NCHAN)); 
+  T->Branch("fadc_a1", fadc_int_1, Form("fadc_int_1[%i]/I",FADC_NCHAN)); 
+  T->Branch("fadc_t1", fadc_time_1, Form("fadc_time_1[%i]/I",FADC_NCHAN)); 
+  T->Branch("fadc_nhit", fadc_nhit, Form("fadc_nhit[%i]/I",FADC_NCHAN)); 
 
   /* Open file  */
   char datapath[100];
@@ -119,10 +67,6 @@ int main (int argc, char **argv)
     printf("Unable to open file %s status = %d\n",datapath,status);
     exit(-1);
   } 
-  else 
-  {
-    printf("Opened %s for reading, hit <enter> to see each individual event (pr=%d ptb=%d)\n\n",datapath,pr,ptb);
-  }
 
   /* Get evio version # of file */
   status = evIoctl(handle, (char*)"v", &version);
@@ -187,24 +131,7 @@ int main (int argc, char **argv)
 
     if (pe == 0) 
     {
-      /* Print out some of the Event to std out */
-      if (nWords > 64) 
-        plen = 64;
-      else
-        plen = nWords;
-
-      for (int ii=0;ii<plen;ii++) 
-      {
-        if ((ii % 8) == 0 ) printf("\n%3d : ",ii);
-        printf("%08x ",buf[indx+ii]);
-      }
-
       indx += nWords;
-      if(plen < nWords)
-        printf("\n      ...\n\n");
-      else
-        printf("\n\n");
-
     } 
     else 
     { /* This is a built Physics Event. Disect a bit more... */
@@ -213,6 +140,7 @@ int main (int argc, char **argv)
       nROC=0;
 
 	  ClearTreeVar();
+	  if(firstevent)fadc_mode=-1;
 
       /* Decode Trigger Bank into the Structure */
       tbLen = trigBankDecode(&buf[indx], blk);
@@ -223,50 +151,48 @@ int main (int argc, char **argv)
       if(verbose) printf("    ** index %d ... Starting Event number = %llu **\n",indx,(long long)tbank.evtNum);
       if((long long)tbank.evtNum%1000==0) printf("  Event number = %llu **\n",(long long)tbank.evtNum);
 
-      if (ptb) 
-      {
-        /* Print Trigger Bank information */
-        if(verbose) printf("    Trigger BANK INFO (TAG = 0x%4x):\n",tbank.tag);
-        if(verbose) printf("         Event #       Time Stamp       Event Type\n");
-        if(verbose) printf("         -------       ----------       ----------\n");
-        for(i=0; i<tbank.blksize; i++) 
-        {
-		  if(!verbose) break; 
-          if(tbank.evTS != NULL)
-            printf("      %10d  0x%016llx    %d\n",(int) (tbank.evtNum + i), (long long unsigned int )tbank.evTS[i], tbank.evType[i]);
-          else
-            printf("      %10d  (No Time Stamp)    %d\n",(int) (tbank.evtNum + i), tbank.evType[i]);
-        }
-        if(verbose) printf("\n");
-      }
-
       /* Decode ROC data */
       while(nROC<tbank.nrocs){
 		rocLen[nROC] = buf[indx]+1;
 		rocID[nROC] = (buf[indx+1]&0xFFF0000)>>16;
 
-		printf("roc len = %d (data = 0x%x);  roc ID = %d (data = 0x%x)\n",rocLen[nROC],buf[indx],rocID[nROC],buf[indx+1]);
+		if(verbose)printf("roc len = %d (data = 0x%x);  roc ID = %d (data = 0x%x)\n",rocLen[nROC],buf[indx],rocID[nROC],buf[indx+1]);
 
 	    Int_t nnWd = 2; // ROC data words counter
 		if(rocID[nROC]==TI_ROC){  //TI ROC have FADC, VETROC, SCALER
 		  while(nnWd<rocLen[nROC]){
 
 			int tmplen = buf[indx+nnWd]+1;   //bank length
+		    if(verbose)printf("bank len = %d (data = 0x%x);\n",tmplen,buf[indx+nnWd]);
 	        nnWd++;
 			int tmpBank = (buf[indx+nnWd]&0xFFF0000)>>16; // bank tag
+		    if(verbose)printf("bank tag = %d (data = 0x%x)\n",tmpBank,buf[indx+nnWd]);
 			nnWd++;
-		    printf("bank len = %d (data = 0x%x);  bank tag = %d (data = 0x%x)\n",tmplen,buf[indx+2],tmpBank,buf[indx+3]);
 
 			if(tmpBank == FADC_BANK){
 			   if( buf[indx+nnWd] == FIRSTWORD_FADC) nnWd++; // skip the FADC special header;
-			   Int_t fadc_words = buf[indx+nnWd]+1;
-			   for(int kk=1;kk<fadc_words;kk++){
+			   Int_t fadc_words = buf[indx+nnWd]+1;    // num of FADC words
+
+			   // 0xf800fafa is a dummy FADC data
+
+			   for(int kk=2;kk<fadc_words;kk++){
 				   faDataDecode(buf[indx+nnWd+kk]);
 			   }
-			   fadc_mode = GetFadcMode();
+			   if(firstevent){
+				 fadc_mode = GetFadcMode();
+				 if(fadc_mode == RAW_MODE)
+                    T->Branch("fadc_rawADC", frawdata, Form("frawdata[%i][%i]/I",FADC_NCHAN,MAXRAW)); 
+			   }
 			   nnWd += fadc_words; 
 			} //FADC bank
 
+			if(tmpBank == VETROC_BANK){
+			   nnWd += tmplen-2; 
+			} //VETROC bank
+
+			if(tmpBank == SCALER_BANK){
+			   nnWd += tmplen-2; 
+			} //SCALER bank
 		  } // loop one ROC data
 		}  // TI ROC
 
@@ -274,7 +200,8 @@ int main (int argc, char **argv)
 		nROC++;
 	  } // loop ROCs
 
-
+      T->Fill();
+	  if(firstevent) firstevent = false;
     }
 
     /* free the event buffer and wait for next one */
@@ -323,11 +250,15 @@ void ClearTreeVar(){
      tMPS=0;	   
      evtype=0;    
 
-     fadc_mode=0;                // FADC mode
-	 memset(fadc_int, 0, 16*sizeof(fadc_int[0]));
-	 memset(fadc_time, 0, 16*sizeof(fadc_time[0]));
-	 memset(fadc_int_1, 0, 16*sizeof(fadc_int_1[0]));
-	 memset(fadc_time_1, 0, 16*sizeof(fadc_time_1[0]));
-	 memset(fadc_nhit, 0, 16*sizeof(fadc_nhit[0]));
+	 memset(fadc_int, 0, FADC_NCHAN*sizeof(fadc_int[0]));
+	 memset(fadc_time, 0, FADC_NCHAN*sizeof(fadc_time[0]));
+	 memset(fadc_int_1, 0, FADC_NCHAN*sizeof(fadc_int_1[0]));
+	 memset(fadc_time_1, 0, FADC_NCHAN*sizeof(fadc_time_1[0]));
+	 memset(fadc_nhit, 0, FADC_NCHAN*sizeof(fadc_nhit[0]));
+	 memset(ftdc_nhit, 0, FADC_NCHAN*sizeof(ftdc_nhit[0]));
+     memset(frawdata, 0, FADC_NCHAN*MAXRAW*sizeof(frawdata[0][0]));	
+	 
+
+	 nrawdata=0;
 
 }

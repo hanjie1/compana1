@@ -58,8 +58,8 @@ int trigBankDecode(uint32_t *tb, int blkSize)
   index_roc += 1;
   for(uint32_t ii=index_roc;ii<tbank.len;ii++){
       if((tb[ii]&0xffff0000)==0xda560000){
-		  tbank.helicity = (tb[ii] & 0x20);
-		  tbank.mps = (tb[ii] & 0x10);
+		  tbank.helicity = (tb[ii] & 0x20)>>5;
+		  tbank.mps = (tb[ii] & 0x10)>>4;
 		  break;
       }
       else continue;
