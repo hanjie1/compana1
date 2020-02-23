@@ -15,6 +15,7 @@
 #include "SetTreeVars.h"
 #include "Fadc250Decode.h"
 #include "TIDecode.h"
+#include "VETROCDecode.h"
 
 using namespace std;
 
@@ -31,7 +32,6 @@ int main ()
   int num;
   int pe;
   Int_t tbLen, rocLen[MAX_ROCS], rocID[MAX_ROCS];
-  Int_t rbankLen[NBANK],rbankTag[NBANK];
   uint32_t *buf, dLen, bufLen;
   char *dictionary = NULL;
   bool eventbyevent = true; 
@@ -57,6 +57,22 @@ int main ()
   T->Branch("fadc_a1", fadc_int_1, Form("fadc_int_1[%i]/I",FADC_NCHAN)); 
   T->Branch("fadc_t1", fadc_time_1, Form("fadc_time_1[%i]/I",FADC_NCHAN)); 
   T->Branch("fadc_nhit", fadc_nhit, Form("fadc_nhit[%i]/I",FADC_NCHAN)); 
+  T->Branch("eplaneA_nhits", &eplaneA_nhits, "eplaneA_nhits/I");
+  T->Branch("eplaneA_chan", eplaneA_chan, "eplaneA_chan[eplaneA_nhits]/I"); 
+  T->Branch("eplaneA_rt", eplaneA_rt, "eplaneA_rt[eplaneA_nhits]/I"); 
+  T->Branch("eplaneA_ft", eplaneA_ft, "eplaneA_ft[eplaneA_nhits]/I"); 
+  T->Branch("eplaneB_nhits", &eplaneB_nhits, "eplaneB_nhits/I");
+  T->Branch("eplaneB_chan", eplaneB_chan, "eplaneB_chan[eplaneB_nhits]/I"); 
+  T->Branch("eplaneB_rt", eplaneB_rt, "eplaneB_rt[eplaneB_nhits]/I"); 
+  T->Branch("eplaneB_ft", eplaneB_ft, "eplaneB_ft[eplaneB_nhits]/I"); 
+  T->Branch("eplaneC_nhits", &eplaneC_nhits, "eplaneC_nhits/I");
+  T->Branch("eplaneC_chan", eplaneC_chan, "eplaneC_chan[eplaneC_nhits]/I"); 
+  T->Branch("eplaneC_rt", eplaneC_rt, "eplaneC_rt[eplaneC_nhits]/I"); 
+  T->Branch("eplaneC_ft", eplaneC_ft, "eplaneC_ft[eplaneC_nhits]/I"); 
+  T->Branch("eplaneD_nhits", &eplaneD_nhits, "eplaneD_nhits/I");
+  T->Branch("eplaneD_chan", eplaneD_chan, "eplaneD_chan[eplaneD_nhits]/I"); 
+  T->Branch("eplaneD_rt", eplaneD_rt, "eplaneD_rt[eplaneD_nhits]/I"); 
+  T->Branch("eplaneD_ft", eplaneD_ft, "eplaneD_ft[eplaneD_nhits]/I"); 
 
   /* Open file  */
   char datapath[100];
@@ -187,6 +203,10 @@ int main ()
 			} //FADC bank
 
 			if(tmpBank == VETROC_BANK){
+			   for(int kk=0; kk<tmplen-2; kk++){
+			     if( buf[indx+nnWd+kk] == FIRSTWORD_VETROC) continue;// skip the vetroc special header
+				   vetDataDecode(buf[indx+nnWd+kk]);
+			   }
 			   nnWd += tmplen-2; 
 			} //VETROC bank
 
@@ -257,8 +277,25 @@ void ClearTreeVar(){
 	 memset(fadc_nhit, 0, FADC_NCHAN*sizeof(fadc_nhit[0]));
 	 memset(ftdc_nhit, 0, FADC_NCHAN*sizeof(ftdc_nhit[0]));
      memset(frawdata, 0, FADC_NCHAN*MAXRAW*sizeof(frawdata[0][0]));	
-	 
-
 	 nrawdata=0;
+	 
+	 eplaneA_nhits=0;
+	 memset(eplaneA_chan, 0, VETROC_MAXHIT*sizeof(eplaneA_chan[0]));
+	 memset(eplaneA_rt, 0, VETROC_MAXHIT*sizeof(eplaneA_rt[0]));
+	 memset(eplaneA_ft, 0, VETROC_MAXHIT*sizeof(eplaneA_ft[0]));
 
+	 eplaneB_nhits=0;
+	 memset(eplaneB_chan, 0, VETROC_MAXHIT*sizeof(eplaneB_chan[0]));
+	 memset(eplaneB_rt, 0, VETROC_MAXHIT*sizeof(eplaneB_rt[0]));
+	 memset(eplaneB_ft, 0, VETROC_MAXHIT*sizeof(eplaneB_ft[0]));
+
+	 eplaneC_nhits=0;
+	 memset(eplaneC_chan, 0, VETROC_MAXHIT*sizeof(eplaneC_chan[0]));
+	 memset(eplaneC_rt, 0, VETROC_MAXHIT*sizeof(eplaneC_rt[0]));
+	 memset(eplaneC_ft, 0, VETROC_MAXHIT*sizeof(eplaneC_ft[0]));
+
+	 eplaneD_nhits=0;
+	 memset(eplaneD_chan, 0, VETROC_MAXHIT*sizeof(eplaneD_chan[0]));
+	 memset(eplaneD_rt, 0, VETROC_MAXHIT*sizeof(eplaneD_rt[0]));
+	 memset(eplaneD_ft, 0, VETROC_MAXHIT*sizeof(eplaneD_ft[0]));
 }

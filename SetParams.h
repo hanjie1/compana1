@@ -10,6 +10,12 @@
 #define FADC_BANK      3
 #define VETROC_BANK    4
 #define SCALER_BANK    6
+#define EPLANEA_SLOT   13
+#define EPLANEB_SLOT   14
+#define EPLANEC_SLOT   15
+#define EPLANED_SLOT   16
 
 const int FADC_NCHAN=6;  // FADC maximum number of channels
 const int MAXRAW=280;	 // FADC raw mode maximum window width
+const int VETROC_NCHAN = 128; //VETROC maximum number of channels;
+const int VETROC_MAXHIT = 512; //VETROC maximum hits;

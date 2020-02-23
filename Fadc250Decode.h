@@ -4,6 +4,7 @@ struct fadc_data_struct
   unsigned int type;
   unsigned int slot_id_hd;
   unsigned int slot_id_tr;
+  unsigned int slot_id_evt;
   unsigned int n_evts;
   unsigned int blk_num;
   unsigned int n_words;
@@ -113,14 +114,17 @@ void faDataDecode(unsigned int data)
     case 2:     /* EVENT HEADER */
       if( fadc_data.new_type )
     {
-      fadc_data.evt_num_1 = (data & 0x7FFFFFF);
+	  fadc_data.slot_id_evt = (data >> 22) & 0x1F;
+	  if(fadc_data.slot_id_evt != fadc_data.slot_id_hd)
+		printf("FADC Warning: event slot id is not the same as the block slot id !\n");
+      fadc_data.evt_num_1 = (data & 0x3FFFFF);
       trignum = fadc_data.evt_num_1;
       if( i_print )
         printf("%8X - EVENT HEADER 1 - evt_num = %d\n", data, fadc_data.evt_num_1);
     }
       else
     {
-      fadc_data.evt_num_2 = (data & 0x7FFFFFF);
+      fadc_data.evt_num_2 = (data & 0x3FFFFF);   // ??? not sure why there is not new type event 2 (for multi blocks?)
       if( i_print )
         printf("%8X - EVENT HEADER 2 - evt_num = %d\n", data, fadc_data.evt_num_2);
     }
