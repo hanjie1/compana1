@@ -37,4 +37,10 @@ Int_t eplaneD_chan[VETROC_MAXHIT];   // vetroc channel number
 Int_t eplaneD_rt[VETROC_MAXHIT];     // vetroc hit tdc rising time
 Int_t eplaneD_ft[VETROC_MAXHIT];     // vetroc hit tdc falling time
 
-
+/***  Scaler tree variables ***/
+Int_t clock1;						 // 40MHz clock in IPscaler channel 1
+Int_t CavPower;						 // cavity power
+Int_t BCM;							 // BCM
+Int_t clock2;						 // 40 MHz clock in Run scaler channel 2
+Int_t clock3;						 // 40 MHz clock in Run scaler channel 3
+Int_t scalMPS;                        // MPS in scaler

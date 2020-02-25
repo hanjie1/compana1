@@ -24,6 +24,7 @@ using namespace std;
 
 void ClearTreeVar();
 bool verbose = false; 
+Int_t scaldat[32]={0};
 
 int main ()
 {
@@ -73,10 +74,16 @@ int main ()
   T->Branch("eplaneD_chan", eplaneD_chan, "eplaneD_chan[eplaneD_nhits]/I"); 
   T->Branch("eplaneD_rt", eplaneD_rt, "eplaneD_rt[eplaneD_nhits]/I"); 
   T->Branch("eplaneD_ft", eplaneD_ft, "eplaneD_ft[eplaneD_nhits]/I"); 
+  T->Branch("clock1", &clock1, "clock1/I");
+  T->Branch("clock2", &clock2, "clock2/I");
+  T->Branch("clock3", &clock3, "clock3/I");
+  T->Branch("CavPower", &CavPower, "CavPower/I");
+  T->Branch("BCM", &BCM, "BCM/I");
+  T->Branch("scalMPS", &scalMPS, "scalMPS/I");
 
   /* Open file  */
   char datapath[100];
-  sprintf(datapath,"/home/compton/data/vtpCompton_%d.dat.0",run_number);
+  sprintf(datapath,"/home/compton/data2/vtpCompton_%d.dat.0",run_number);
 
   if ( (status = evOpen(datapath, (char*)"r",  &handle)) < 0) 
   {
@@ -211,7 +218,28 @@ int main ()
 			} //VETROC bank
 
 			if(tmpBank == SCALER_BANK){
-			   nnWd += tmplen-2; 
+			  int scaler_nwds = tmplen-2;
+		      if(scaler_nwds%32!=0)
+				printf("Scaler Warning:  event %d could have missing channels ! scaler channel %d\n",nevents, scaler_nwds);
+			  else{
+				if(scaler_nwds/32==1){
+			      for(int kk=0;kk<tmplen-2;kk++){
+				     scaldat[kk]=buf[indx+nnWd+kk];	
+			      }	
+				  clock1 = scaldat[1];
+				  CavPower = scaldat[12];
+				  BCM = scaldat[14];
+				  clock2 = scaldat[18];
+				  clock3 = scaldat[19];
+				  scalMPS = scaldat[21];
+				}
+				else{
+				  if(scaler_nwds/32>1)
+				    printf("Scaler Warning: event %d has multiple scaler events (%d)! so far only 1 event is read out\n",nevents,scaler_nwds/32);
+				}
+			  }
+			  nnWd += tmplen-2; 
+
 			} //SCALER bank
 		  } // loop one ROC data
 		}  // TI ROC
@@ -298,4 +326,13 @@ void ClearTreeVar(){
 	 memset(eplaneD_chan, 0, VETROC_MAXHIT*sizeof(eplaneD_chan[0]));
 	 memset(eplaneD_rt, 0, VETROC_MAXHIT*sizeof(eplaneD_rt[0]));
 	 memset(eplaneD_ft, 0, VETROC_MAXHIT*sizeof(eplaneD_ft[0]));
+
+     clock1 = 0;
+     CavPower = 0;
+     BCM = 0;
+     clock2 = 0;
+     clock3 = 0;
+     scalMPS = 0;
+
+	 memset(scaldat, 0, 32*sizeof(scaldat[0]));
 }
