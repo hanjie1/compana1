@@ -44,3 +44,13 @@ Int_t BCM;							 // BCM
 Int_t clock2;						 // 40 MHz clock in Run scaler channel 2
 Int_t clock3;						 // 40 MHz clock in Run scaler channel 3
 Int_t scalMPS;                        // MPS in scaler
+
+/***  VTP tree variables ***/
+Int_t vtp_A_scalcnt[VETROC_NCHAN];   // vetroc channel number
+Int_t vtp_B_scalcnt[VETROC_NCHAN];   // vetroc channel number
+Int_t vtp_C_scalcnt[VETROC_NCHAN];   // vetroc channel number
+Int_t vtp_D_scalcnt[VETROC_NCHAN];   // vetroc channel number
+
+
+
+

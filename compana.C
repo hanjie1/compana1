@@ -16,12 +16,14 @@
 #include "Fadc250Decode.h"
 #include "TIDecode.h"
 #include "VETROCDecode.h"
+#include "VTPDecode.h"
 
 using namespace std;
 
 // global parameters (eg. maxroc, max fadc channels ...) are set in SetParams.h
 // tree variables are set in SetTreeVars.h
 
+unsigned int LSWAP(unsigned int data);
 void ClearTreeVar();
 bool verbose = false; 
 Int_t scaldat[32]={0};
@@ -80,6 +82,7 @@ int main ()
   T->Branch("CavPower", &CavPower, "CavPower/I");
   T->Branch("BCM", &BCM, "BCM/I");
   T->Branch("scalMPS", &scalMPS, "scalMPS/I");
+//  T->Branch("scaldat", scaldat, "scaldat[32]/I"); 
 
   /* Open file  */
   char datapath[100];
@@ -182,6 +185,31 @@ int main ()
 		if(verbose)printf("roc len = %d (data = 0x%x);  roc ID = %d (data = 0x%x)\n",rocLen[nROC],buf[indx],rocID[nROC],buf[indx+1]);
 
 	    Int_t nnWd = 2; // ROC data words counter
+
+		if(rocID[nROC]==VTP_ROC){  // VTP ROC
+		  while(nnWd<rocLen[nROC]){  // loop vtp roc 
+
+			int tmplen = buf[indx+nnWd]+1;   //bank length
+		    if(verbose)printf("bank len = %d (data = 0x%x);\n",tmplen,buf[indx+nnWd]);
+	        nnWd++;
+			int tmpBank = (buf[indx+nnWd]&0xFFF0000)>>16; // bank tag
+		    if(verbose)printf("bank tag = %d (data = 0x%x)\n",tmpBank,buf[indx+nnWd]);
+			nnWd++;
+
+			if(tmpBank == VTP_BANK){
+			   for(int kk=0; kk<tmplen-2; kk++){
+			       unsigned int new_data;
+			       new_data = LSWAP(buf[indx+nnWd+kk]);
+				   vtpDataDecode(new_data);
+			   }
+			}
+
+			nnWd += tmplen-2;
+			
+		  } // loop roc data
+		} // VTP ROC End
+
+
 		if(rocID[nROC]==TI_ROC){  //TI ROC have FADC, VETROC, SCALER
 		  while(nnWd<rocLen[nROC]){
 
@@ -292,6 +320,15 @@ int main ()
 
 } // End of main function
 
+unsigned int LSWAP(unsigned int data){
+	   unsigned int new_data;
+	   new_data = ((data & 0x000000ff)<<24) |
+		 		  ((data & 0x0000ff00)<<8)  |
+				  ((data & 0x00ff0000)>>8)  |
+				  ((data & 0xff000000)>>24) ;
+	   return new_data;
+}
+
 void ClearTreeVar(){
 
      tHelicity=0;  
@@ -335,4 +372,10 @@ void ClearTreeVar(){
      scalMPS = 0;
 
 	 memset(scaldat, 0, 32*sizeof(scaldat[0]));
+
+	 ClearVTP();  // clear some vtp_data 
+	 memset(vtp_A_scalcnt, 0, VETROC_NCHAN*sizeof(vtp_A_scalcnt[0]));
+	 memset(vtp_B_scalcnt, 0, VETROC_NCHAN*sizeof(vtp_B_scalcnt[0]));
+	 memset(vtp_C_scalcnt, 0, VETROC_NCHAN*sizeof(vtp_C_scalcnt[0]));
+	 memset(vtp_D_scalcnt, 0, VETROC_NCHAN*sizeof(vtp_D_scalcnt[0]));
 }
