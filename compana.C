@@ -77,12 +77,37 @@ int main ()
   T->Branch("eplaneD_rt", eplaneD_rt, "eplaneD_rt[eplaneD_nhits]/I"); 
   T->Branch("eplaneD_ft", eplaneD_ft, "eplaneD_ft[eplaneD_nhits]/I"); 
   T->Branch("clock1", &clock1, "clock1/I");
-  T->Branch("clock2", &clock2, "clock2/I");
-  T->Branch("clock3", &clock3, "clock3/I");
   T->Branch("CavPower", &CavPower, "CavPower/I");
   T->Branch("BCM", &BCM, "BCM/I");
-  T->Branch("scalMPS", &scalMPS, "scalMPS/I");
-//  T->Branch("scaldat", scaldat, "scaldat[32]/I"); 
+  T->Branch("BPM2AX_p", &BPM2AX_p, "BPM2AX_p/I");
+  T->Branch("BPM2AX_m", &BPM2AX_m, "BPM2AX_m/I");
+  T->Branch("BPM2AY_p", &BPM2AY_p, "BPM2AY_p/I");
+  T->Branch("BPM2AY_m", &BPM2AY_m, "BPM2AY_m/I");
+  T->Branch("BPM2BX_p", &BPM2BX_p, "BPM2BX_p/I");
+  T->Branch("BPM2BX_m", &BPM2BX_m, "BPM2BX_m/I");
+  T->Branch("BPM2BY_p", &BPM2BY_p, "BPM2BY_p/I");
+  T->Branch("BPM2BY_m", &BPM2BY_m, "BPM2BY_m/I");
+
+  TTree *E = new TTree("E","scaler data");
+  E->Branch("scaldat", scaldat, "scaldat[32]/I"); 
+
+  TTree *VTP = new TTree("VTP","vtp data");
+  VTP->Branch("eplaneA_scalcnt",vtp_A_scalcnt,Form("vtp_A_scalcnt[%d]/I",VETROC_NCHAN));
+  VTP->Branch("eplaneB_scalcnt",vtp_B_scalcnt,Form("vtp_B_scalcnt[%d]/I",VETROC_NCHAN));
+  VTP->Branch("eplaneC_scalcnt",vtp_C_scalcnt,Form("vtp_C_scalcnt[%d]/I",VETROC_NCHAN));
+  VTP->Branch("eplaneD_scalcnt",vtp_D_scalcnt,Form("vtp_D_scalcnt[%d]/I",VETROC_NCHAN));
+  VTP->Branch("scaldat",vtp_scaldat,"vtp_scaldat[16]/I");
+  VTP->Branch("busytime",&busytime,"busytime/I");
+  VTP->Branch("livetime",&livetime,"livetime/I");
+  VTP->Branch("hel_win_cnt_1",&hel_win_cnt_1,"hel_win_cnt_1/I");
+  VTP->Branch("trigcnt",trigcnt,"trigcnt[5]/I");
+  VTP->Branch("pattern_num",&pattern_num,"pattern_num/I");
+  VTP->Branch("trig_pattern",trig_pattern,"trig_pattern[pattern_num]/I");
+  VTP->Branch("trig_pattern_time",trig_pattern_time,"trig_pattern_time[pattern_num]/I");
+  VTP->Branch("vtp_past_hel",vtp_past_hel,"vtp_past_hel[6]/I");
+  VTP->Branch("last_mps_time",&last_mps_time,"last_mps_time/I");
+  VTP->Branch("hel_win_cnt",&hel_win_cnt,"hel_win_cnt/I");
+
 
   /* Open file  */
   char datapath[100];
@@ -202,6 +227,10 @@ int main ()
 			       new_data = LSWAP(buf[indx+nnWd+kk]);
 				   vtpDataDecode(new_data);
 			   }
+			   for(int mm=0;mm<6;mm++)
+				 vtp_past_hel[mm] = vtp_data.helicity[mm];
+
+			   VTP->Fill();
 			}
 
 			nnWd += tmplen-2;
@@ -255,11 +284,18 @@ int main ()
 				     scaldat[kk]=buf[indx+nnWd+kk];	
 			      }	
 				  clock1 = scaldat[1];
+				  BPM2AY_m = scaldat[2];
+				  BPM2AY_p = scaldat[3];
+				  BPM2AX_m = scaldat[4];
+				  BPM2AX_p = scaldat[5];
+				  BPM2BY_m = scaldat[6];
+				  BPM2BY_p = scaldat[7];
+				  BPM2BX_m = scaldat[8];
+				  BPM2BX_p = scaldat[9];
 				  CavPower = scaldat[12];
-				  BCM = scaldat[14];
-				  clock2 = scaldat[18];
-				  clock3 = scaldat[19];
-				  scalMPS = scaldat[21];
+				  BCM = scaldat[15];
+
+				  E->Fill();
 				}
 				else{
 				  if(scaler_nwds/32>1)
@@ -313,6 +349,8 @@ int main ()
 
 
   T->Write(); 
+  E->Write(); 
+  VTP->Write(); 
   hfile->Close(); 
   evClose(handle);
 
@@ -367,9 +405,6 @@ void ClearTreeVar(){
      clock1 = 0;
      CavPower = 0;
      BCM = 0;
-     clock2 = 0;
-     clock3 = 0;
-     scalMPS = 0;
 
 	 memset(scaldat, 0, 32*sizeof(scaldat[0]));
 
@@ -378,4 +413,16 @@ void ClearTreeVar(){
 	 memset(vtp_B_scalcnt, 0, VETROC_NCHAN*sizeof(vtp_B_scalcnt[0]));
 	 memset(vtp_C_scalcnt, 0, VETROC_NCHAN*sizeof(vtp_C_scalcnt[0]));
 	 memset(vtp_D_scalcnt, 0, VETROC_NCHAN*sizeof(vtp_D_scalcnt[0]));
+	 memset(vtp_scaldat, 0, 16*sizeof(vtp_scaldat[0]));
+	 busytime = 0;
+	 livetime = 0;
+	 hel_win_cnt_1 = 0;
+	 memset(trigcnt, 0, 5*sizeof(trigcnt[0]));
+	 pattern_num = 0;
+	 memset(trig_pattern, 0, 64*sizeof(trig_pattern[0]));
+	 memset(trig_pattern_time, 0, 64*sizeof(trig_pattern_time[0]));
+     last_mps_time = 0;
+	 memset(vtp_past_hel, 0, 6*sizeof(vtp_past_hel[0]));
+	 hel_win_cnt = 0;
+
 }

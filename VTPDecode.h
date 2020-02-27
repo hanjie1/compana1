@@ -26,9 +26,9 @@ struct vtp_data_struct
    unsigned int trig_pat;
 }vtp_data;
 
-int sub_type_8=0;
-int sub_type_9=0;
-int sub_type_10=0;
+int sub_type_8 = 0;
+int sub_type_9 = 0;
+int sub_type_10 = 0;
 
 void ClearVTP(){
    for(int ii=0;ii<6;ii++){
@@ -116,11 +116,13 @@ void vtpDataDecode(unsigned int data){
 		  else{
 			 if(sub_type_8 == 1){
 				vtp_data.last_mps_t = (data & 0x7fffffff);
+				last_mps_time = vtp_data.last_mps_t;
 			    if(i_print)
 				  printf("%8X - HELICITY - LAST MPS TIME = %d\n", data, vtp_data.last_mps_t);
 			 }	
 			 if(sub_type_8 == 2){
 				vtp_data.hel_win_cnt = (data & 0x7fffffff);
+				hel_win_cnt = vtp_data.hel_win_cnt;
 			    if(i_print)
 				  printf("%8X - HELICITY - HELICITY WINDOW COUNTS = %d\n", data, vtp_data.hel_win_cnt);
 			 }	
@@ -144,21 +146,25 @@ void vtpDataDecode(unsigned int data){
 		  else{
 			 if(sub_type_9 == 1){
 				vtp_data.hel_win_cnt_1 = (data & 0x7fffffff);
+				hel_win_cnt_1 = vtp_data.hel_win_cnt_1;
 			    if(i_print)
 				  printf("%8X - TRIGGER SCALER - HELICITY WINDOW COUNTS = %d\n", data, vtp_data.hel_win_cnt_1);
 			 }	
 			 if(sub_type_9 == 2){
 				vtp_data.livetime = (data & 0x7fffffff);
+				livetime = vtp_data.livetime;
 			    if(i_print)
 				  printf("%8X - TRIGGER SCALER - LIVE TIME = %d\n", data, vtp_data.livetime);
 			 }	
 			 if(sub_type_9 == 3){
 				vtp_data.busytime = (data & 0x7fffffff);
+				busytime = vtp_data.busytime;
 			    if(i_print)
 				  printf("%8X - TRIGGER SCALER - BUSY TIME = %d\n", data, vtp_data.busytime);
 			 }	
 			 if(sub_type_9 > 3 && sub_type_9 < 9){
 				vtp_data.trig_cnt[sub_type_9-4] = (data & 0x7fffffff);
+				trigcnt[sub_type_9-4] = vtp_data.trig_cnt[sub_type_9-4];
 			    if(i_print)
 				  printf("%8X - TRIGGER SCALER -  %d = %d\n", data, sub_type_9-2, vtp_data.last_mps_t);
 			 }	
@@ -182,10 +188,11 @@ void vtpDataDecode(unsigned int data){
 				if(vtp_data.chan >= 128)
 				  printf("VTP Warning: vetroc channel %d >= 128\n",vtp_data.chan);
 				else{
-				  if(vtp_data.slot_id_strip == EPLANEA_SLOT)vtp_A_scalcnt[vtp_data.chan]=vtp_data.scal_cnt;
-				  if(vtp_data.slot_id_strip == EPLANEB_SLOT)vtp_B_scalcnt[vtp_data.chan]=vtp_data.scal_cnt;
-				  if(vtp_data.slot_id_strip == EPLANEC_SLOT)vtp_C_scalcnt[vtp_data.chan]=vtp_data.scal_cnt;
-				  if(vtp_data.slot_id_strip == EPLANED_SLOT)vtp_D_scalcnt[vtp_data.chan]=vtp_data.scal_cnt;
+				  if(vtp_data.slot_id_strip == EPLANEA_SLOT)   vtp_A_scalcnt[vtp_data.chan]=vtp_data.scal_cnt;
+				  if(vtp_data.slot_id_strip == EPLANEB_SLOT)   vtp_B_scalcnt[vtp_data.chan]=vtp_data.scal_cnt;
+				  if(vtp_data.slot_id_strip == EPLANEC_SLOT)   vtp_C_scalcnt[vtp_data.chan]=vtp_data.scal_cnt;
+				  if(vtp_data.slot_id_strip == EPLANED_SLOT)   vtp_D_scalcnt[vtp_data.chan]=vtp_data.scal_cnt;
+				  if(vtp_data.slot_id_strip == VTPSCALER_SLOT) vtp_scaldat[vtp_data.chan]=vtp_data.scal_cnt;
 				}
 
 			    if(i_print)
@@ -204,6 +211,9 @@ void vtpDataDecode(unsigned int data){
 	case 13:
 	 vtp_data.trig_pat_time = (data >> 16) & 0x7ff;
 	 vtp_data.trig_pat = (data & 0xffff);
+	 trig_pattern[pattern_num] = vtp_data.trig_pat;
+	 trig_pattern_time[pattern_num] = vtp_data.trig_pat_time;
+	 pattern_num++;
 	 if(i_print)
 		printf("%8X - TRIGGER BIT - TIME = %d, BIT PATTERN = %d\n",data,vtp_data.trig_pat_time, vtp_data.trig_pat);
 	 break;
