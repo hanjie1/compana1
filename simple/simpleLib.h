@@ -24,10 +24,10 @@
  * </pre>
  *----------------------------------------------------------------------------*/
 #define SIMPLE_MAX_MODULE_TYPES  4
-#define SIMPLE_MAX_BLOCKLEVEL  255
-#define SIMPLE_MAX_ROCS        255
-#define SIMPLE_MAX_BANKS       255
-#define SIMPLE_MAX_SLOTS        32
+#define SIMPLE_MAX_BLOCKLEVEL   50
+#define SIMPLE_MAX_ROCS          5
+#define SIMPLE_MAX_BANKS       100
+#define SIMPLE_MAX_SLOTS        20
 
 #define BANK_ID_MASK   0xFFFF0000
 
@@ -312,6 +312,7 @@ int  simpleScanBank(volatile unsigned int *data, int rocID, int bankNumber);
 int simpleGetRocBanks(int rocID, int bankID, int *bankList);
 int simpleGetRocSlotmask(int rocID, int bankID, unsigned int *slotmask);
 int simpleGetRocBlockLevel(int rocID, int bankID, int *blockLevel);
+int simpleGetRocBankData(int rocID, int bankID, unsigned int **buffer);
 
 int simpleGetSlotBlockHeader(int rocID, int bank, int slot, unsigned int *header);
 int simpleGetSlotEventHeader(int rocID, int bank, int slot, int evt, unsigned int *header);

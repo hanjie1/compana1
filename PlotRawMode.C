@@ -10,6 +10,7 @@ void PlotRawMode(){
      TString filename = Form("/home/compton/hanjie/compana1/Rootfiles/eDet_%d.root", runnumber); 
 
 	 TFile *f0 = new TFile(filename);
+	 if(! (f0->IsOpen()) ) return;
 	 TTree *T = (TTree*) f0->Get("T");
 
 	 TString outfile = Form("/home/compton/hanjie/compana1/FADC_RawROOtfiles/eDet_%d.root", runnumber);

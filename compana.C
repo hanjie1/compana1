@@ -25,6 +25,7 @@ using namespace std;
 // tree variables are set in SetTreeVars.h
 
 unsigned int LSWAP(unsigned int data);
+void ClearScaler();
 void ClearTreeVar();
 bool verbose = false; 
 Int_t scaldat[32]={0};
@@ -32,10 +33,9 @@ Int_t scaldat[32]={0};
 int main ()
 {
   int run_number=0;
-  int nROC,  indx, bt, dt, blk, handle, nevents, status, nWords, version;
+  int indx, bt, dt, blk, handle, nevents, status, nWords, version;
   int pe;
   unsigned int blocklevel = 1;
-  Int_t tbLen,rocLen[MAX_ROCS], rocID[MAX_ROCS];
   uint32_t *buf, dLen, bufLen;
   char *dictionary = NULL;
   bool eventbyevent = true; 
@@ -44,6 +44,7 @@ int main ()
   bool firstevent = true;
   int check;
   bool totaldone = false;
+  bool has_scaler = false;
   int vet_slotid[4]={EPLANEA_SLOT,EPLANEB_SLOT,EPLANEC_SLOT,EPLANED_SLOT};
    
 
@@ -254,8 +255,6 @@ int main ()
       if(check == -1)printf("Couldn't find block level !\n");
 	  if(verbose)printf("Block level = %d\n",blocklevel);
 
-
-
       unsigned int header = 0;
       /* FADC block header */
 	  check = simpleGetSlotBlockHeader(TI_ROC, FADC_BANK, FADC_SLOT, &header);
@@ -292,9 +291,27 @@ int main ()
 	      printf("VTP number of events %d is not equal to blocklevel %d !\n",vetroc_data.n_evts, blocklevel);
 	  }
 
+	  /** scaler data load **/
+	  unsigned int *simpScalBuf = NULL;
+	  int simpScalLen=0;
+      simpScalLen = simpleGetRocBankData(TI_ROC, SCALER_BANK, &simpScalBuf);
+	  int nscal=0;
+	  if(simpScalLen > 0){
+         if( simpScalLen % 32 ==0 ){
+		   has_scaler = true;
+		   nscal = simpScalLen/32;
+		   if(nscal > BLOCKLEVEL)
+		      printf("ERROR: number of events in scaler %d is bigger than block level %d *32 \n",simpScalLen,blocklevel);
+		 }
+		 else{
+		   printf("ERROR: number of events in scaler %d is not equal to n*32 \n",simpScalLen);
+		   has_scaler = false;
+		 }
+	  }
+	  else has_scaler = false;
 
 	  /**  loop blocks **/
-      for(int ii=0;ii<blocklevel;ii++){ 
+      for(int ii=0;ii<BLOCKLEVEL;ii++){ 
 	      ClearTreeVar();
 	      if(firstevent)fadc_mode=-1;
 
@@ -360,87 +377,37 @@ int main ()
 			   vtp_past_hel[mm] = vtp_data.helicity[mm];
 		  }
 
+		  /** scaler data **/
+		  if(has_scaler && ii<nscal){
+			for(int nn=0; nn<32; nn++){
+				scaldat[nn] = simpScalBuf[ii*32+nn];
+			}
+   		    clock1 = scaldat[1];
+			BPM2AY_m = scaldat[2];
+			BPM2AY_p = scaldat[3];
+			BPM2AX_m = scaldat[4];
+			BPM2AX_p = scaldat[5];
+			BPM2BY_m = scaldat[6];
+			BPM2BY_p = scaldat[7];
+			BPM2BX_m = scaldat[8];
+			BPM2BX_p = scaldat[9];
+			CavPower = scaldat[12];
+			BCM = scaldat[15];
+
+			E->Fill();
+		  }
+
+
           T->Fill();
 		  VTP->Fill();
           nevents++;
 	  } // loop over block levels
 
-	  /**  scaler data decode **/
-/*	  unsigned int *simpScalBuf = NULL;
-	  int simpScalLen=0;
-      simpScalLen = simpleGetSlotEventData(TI_ROC, SCALER_BANK, SCALER_SLOT, ii, &simpDataBuf);
-		  if(simpLen <= 0)
-			printf("ERROR fadc event data length %d <= 0 \n",simpLen);
-	      else{
-			for(int idata = 0; idata < simpLen; idata++)
-			   faDataDecode(simpDataBuf[idata]);
 
-			if(firstevent){
-				 fadc_mode = GetFadcMode();
-				 if(fadc_mode == RAW_MODE)
-                    T->Branch("fadc_rawADC", frawdata, Form("frawdata[%i][%i]/I",FADC_NCHAN,MAXRAW)); 
-			 }
-		  }
-
-	  for(int ii=0;ii<blocklevel;ii++){
-	
-	  }
-*/
       if(totaldone) break;
 
 
-/*
-		if(rocID[nROC]==TI_ROC){  //TI ROC have FADC, VETROC, SCALER
-		  while(nnWd<rocLen[nROC]){
-
-			int tmplen = buf[indx+nnWd]+1;   //bank length
-		    if(verbose)printf("bank len = %d (data = 0x%x);\n",tmplen,buf[indx+nnWd]);
-	        nnWd++;
-			int tmpBank = (buf[indx+nnWd]&0xFFF0000)>>16; // bank tag
-		    if(verbose)printf("bank tag = %d (data = 0x%x)\n",tmpBank,buf[indx+nnWd]);
-			nnWd++;
-
-
-			if(tmpBank == SCALER_BANK){
-			  int scaler_nwds = tmplen-2;
-		      if(scaler_nwds%32!=0)
-				printf("Scaler Warning:  event %d could have missing channels ! scaler channel %d\n",nevents, scaler_nwds);
-			  else{
-				if(scaler_nwds/32==1){
-			      for(int kk=0;kk<tmplen-2;kk++){
-				     scaldat[kk]=buf[indx+nnWd+kk];	
-			      }	
-				  clock1 = scaldat[1];
-				  BPM2AY_m = scaldat[2];
-				  BPM2AY_p = scaldat[3];
-				  BPM2AX_m = scaldat[4];
-				  BPM2AX_p = scaldat[5];
-				  BPM2BY_m = scaldat[6];
-				  BPM2BY_p = scaldat[7];
-				  BPM2BX_m = scaldat[8];
-				  BPM2BX_p = scaldat[9];
-				  CavPower = scaldat[12];
-				  BCM = scaldat[15];
-
-				  E->Fill();
-				}
-				else{
-				  if(scaler_nwds/32>1)
-				    printf("Scaler Warning: event %d has multiple scaler events (%d)! so far only 1 event is read out\n",nevents,scaler_nwds/32);
-				}
-			  }
-			  nnWd += tmplen-2; 
-
-			} //SCALER bank
-		  } // loop one ROC data
-		}  // TI ROC
-
-		indx += rocLen[nROC];
-		nROC++;
-	  } // loop ROCs
-
-      T->Fill();
-*/	  if(firstevent) firstevent = false;
+	  if(firstevent) firstevent = false;
     }
 
     /* free the event buffer and wait for next one */
@@ -529,11 +496,7 @@ void ClearTreeVar(){
 	 memset(eplaneD_rt, 0, VETROC_MAXHIT*sizeof(eplaneD_rt[0]));
 	 memset(eplaneD_ft, 0, VETROC_MAXHIT*sizeof(eplaneD_ft[0]));
 
-     clock1 = 0;
-     CavPower = 0;
-     BCM = 0;
-
-	 memset(scaldat, 0, 32*sizeof(scaldat[0]));
+     ClearScaler();
 
 	 ClearVTP();  // clear some vtp_data 
 	 memset(vtp_A_scalcnt, 0, VETROC_NCHAN*sizeof(vtp_A_scalcnt[0]));
@@ -551,5 +514,24 @@ void ClearTreeVar(){
      last_mps_time = 0;
 	 memset(vtp_past_hel, 0, 6*sizeof(vtp_past_hel[0]));
 	 hel_win_cnt = 0;
+
+}
+
+void ClearScaler(){
+
+     clock1 = 0;
+     CavPower = 0;
+     BCM = 0;
+
+	BPM2AY_m = 0;
+	BPM2AY_p = 0;
+	BPM2AX_m = 0;
+	BPM2AX_p = 0;
+	BPM2BY_m = 0;
+	BPM2BY_p = 0;
+	BPM2BX_m = 0;
+	BPM2BX_p = 0;
+
+	 memset(scaldat, 0, 32*sizeof(scaldat[0]));
 
 }
