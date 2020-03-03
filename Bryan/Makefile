@@ -1,8 +1,8 @@
 # Makefile for compana decoder
 #
 
-SIMPLE_INC	= /home/moffit/work/simple
-SIMPLE_LIB      = /home/moffit/work/simple
+SIMPLE_INC	= ./simple-feature-coda3_indexer/
+SIMPLE_LIB      = ./simple-feature-coda3_indexer/
 
 EVIO_INC	?= /site/coda/3.10/Linux-x86_64/include
 EVIO_LIB	?= /site/coda/3.10/Linux-x86_64/lib

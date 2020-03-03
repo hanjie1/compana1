@@ -64,8 +64,8 @@ void vetDataDecode(unsigned int data)
       if( vetroc_data.new_type )
     {   
 	  vetroc_data.slot_id_evt = (data >> 22) & 0x1F;
-      if(vetroc_data.slot_id_evt != vetroc_data.slot_id_hd)
-        printf("VETROC Warning: event slot id is not the same as the block slot id !\n");
+      //if(vetroc_data.slot_id_evt != vetroc_data.slot_id_hd)
+        //printf("VETROC Warning: event slot id is not the same as the block slot id !\n");
 
       vetroc_data.evt_num = (data & 0x3FFFFF);
       if( i_print )

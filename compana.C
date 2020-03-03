@@ -11,6 +11,7 @@
 #include "TString.h"
 #include "TBranch.h"
 #include "TH1.h"
+#include "simpleLib.h"
 #include "SetParams.h"
 #include "SetTreeVars.h"
 #include "Fadc250Decode.h"
@@ -32,15 +33,19 @@ int main ()
 {
   int run_number=0;
   int nROC,  indx, bt, dt, blk, handle, nevents, status, nWords, version;
-  int num;
   int pe;
-  Int_t tbLen, rocLen[MAX_ROCS], rocID[MAX_ROCS];
+  unsigned int blocklevel = 1;
+  Int_t tbLen,rocLen[MAX_ROCS], rocID[MAX_ROCS];
   uint32_t *buf, dLen, bufLen;
   char *dictionary = NULL;
   bool eventbyevent = true; 
   int maxevents = 1e9;
   Int_t totalmax=1000;
   bool firstevent = true;
+  int check;
+  bool totaldone = false;
+  int vet_slotid[4]={EPLANEA_SLOT,EPLANEB_SLOT,EPLANEC_SLOT,EPLANED_SLOT};
+   
 
   cout<<"Which run? ";
   cin>>run_number;
@@ -134,22 +139,50 @@ int main ()
     free(dictionary);
   }
 
+  // Unblocking initialize
+  // SIMPLE: initialize
+  simpleInit();
+
+  /* SIMPLE: Define banks For compton
+   *  rocID     bankID     slot   what      endian
+   *  1         3            3    fadc250   little
+   *  1         4           13    vetroc    little
+   *  1         4           14    vetroc    little
+   *  1         4           15    vetroc    little
+   *  1         4           16    vetroc    little
+   *  1         6           ??    ??
+   *  3         0x11        ??    ??
+   *  3         0x12        ??    ??
+   *  3         0x56        11    vtp       big
+   *
+   *
+   *  int
+   *  simpleConfigBank(int rocID, int bankID, int num,
+   *                    int endian, int isBlocked, void *firstPassRoutine)
+   *
+   * @param rocID             roc ID
+   * @param bankID            Bank ID
+   * @param num               NOT USED
+   * @param endian            little = 0, big = 1
+   * @param isBlocked         no = 0, yes = 1
+   * @param firstPassRoutine  Routine to call for first pass processing
+   */
+  simpleConfigBank(1, 0x3, 0, 0, 1, NULL);
+  simpleConfigBank(1, 0x4, 0, 0, 1, NULL);
+  simpleConfigBank(1, 0x6, 0, 0, 0, NULL);
+  simpleConfigBank(3, 0x56, 20, 1, 1, NULL);
+
   /* Loop through getting event blocks one at a time and print basic infomation
      about each block */
-  nevents=0;
+  nevents=1;
   while ((status = evReadAlloc(handle, &buf, &bufLen))==0) 
     //while ((evReadAlloc(handle, &buf, &bufLen))!= EOF && (evReadAlloc(handle, &buf, &bufLen))==0) 
   { /* read the event and allocate the correct size buffer */
-	if(nevents>totalmax && totalmax != 1)break;
-    nevents++;
     indx=0; pe=0;
     nWords = buf[0] + 1;
     bt  = ((buf[1]&0xffff0000)>>16);  /* Bank Tag */
     dt  = ((buf[1]&0xff00)>>8);       /* Data Type */
     blk = buf[1]&0xff;                /* Event Block size */
-
-    num=10000;
-    if(nWords<num) num=nWords;
 
     if(verbose) printf("    BLOCK #%d,  Bank tag = 0x%04x, Data type = 0x%04x,  Total len = %d words\n", nevents, bt, dt, nWords);
 
@@ -186,59 +219,177 @@ int main ()
     } 
     else 
     { /* This is a built Physics Event. Disect a bit more... */
-      /* Check the Trigger Bank and how many ROC banks it has */
+
+	  /**  Scan data to find blocks and banks **/
+	  simpleScan(buf, nWords);
+
       indx += 2;
-      nROC=0;
 
-	  ClearTreeVar();
-	  if(firstevent)fadc_mode=-1;
+      /**  Get trigger bank buf **/
+      int tbLen1 = 0; // trigger bank time segment
+	  int tbLen2 = 0; // trigger bank type segment
+	  int tbLenROC[2] = {0}; // trigger bank ROC segment
+   
+	  unsigned long long *simpTrigBuf1 = NULL;
+	  tbLen1 = simpleGetTriggerBankTimeSegment(&simpTrigBuf1);
+	  int fevtNum = simpTrigBuf1[0];
+	  if(fevtNum != nevents) printf("The event number from TI does not match the counter !\n");
 
-      /* Decode Trigger Bank into the Structure */
-      tbLen = trigBankDecode(&buf[indx], blk);
-	  evtype = tbank.evType[0];
-	  tHelicity = tbank.helicity; 
-	  tMPS = tbank.mps; 
-      indx += tbLen;
-      if(verbose) printf("    ** index %d ... Starting Event number = %llu **\n",indx,(long long)tbank.evtNum);
-      if((long long)tbank.evtNum%1000==0) printf("  Event number = %llu **\n",(long long)tbank.evtNum);
+	  if(verbose)printf("Event number for the first event in the block = %d \n",fevtNum);
 
-      /* Decode ROC data */
-      while(nROC<tbank.nrocs){
-		rocLen[nROC] = buf[indx]+1;
-		rocID[nROC] = (buf[indx+1]&0xFFF0000)>>16;
+	  unsigned short *simpTrigBuf2 = NULL;
+	  tbLen2 = simpleGetTriggerBankTypeSegment(&simpTrigBuf2);
 
-		if(verbose)printf("roc len = %d (data = 0x%x);  roc ID = %d (data = 0x%x)\n",rocLen[nROC],buf[indx],rocID[nROC],buf[indx+1]);
+	  unsigned int *simpTrigRocBuf1 = NULL;
+	  tbLenROC[0] = simpleGetTriggerBankRocSegment(TI_ROC,&simpTrigRocBuf1); // TI ROC
 
-	    Int_t nnWd = 2; // ROC data words counter
+	  unsigned int *simpTrigRocBuf2 = NULL;
+	  tbLenROC[1] = simpleGetTriggerBankRocSegment(VTP_ROC,&simpTrigRocBuf2); // VTP ROC
 
-		if(rocID[nROC]==VTP_ROC){  // VTP ROC
-		  while(nnWd<rocLen[nROC]){  // loop vtp roc 
+	  if(verbose)printf("time len = %d , type len = %d , roc1 len = %d , roc2 len = %d\n",tbLen1,tbLen2,tbLenROC[0],tbLenROC[1]);
 
-			int tmplen = buf[indx+nnWd]+1;   //bank length
-		    if(verbose)printf("bank len = %d (data = 0x%x);\n",tmplen,buf[indx+nnWd]);
-	        nnWd++;
-			int tmpBank = (buf[indx+nnWd]&0xFFF0000)>>16; // bank tag
-		    if(verbose)printf("bank tag = %d (data = 0x%x)\n",tmpBank,buf[indx+nnWd]);
-			nnWd++;
+	  int BLOCKLEVEL=1;
+      check = simpleGetRocBlockLevel(TI_ROC, FADC_BANK, &BLOCKLEVEL);
+	  blocklevel = BLOCKLEVEL;
+      if(check == -1)printf("Couldn't find block level !\n");
+	  if(verbose)printf("Block level = %d\n",blocklevel);
 
-			if(tmpBank == VTP_BANK){
-			   for(int kk=0; kk<tmplen-2; kk++){
-			       unsigned int new_data;
-			       new_data = LSWAP(buf[indx+nnWd+kk]);
-				   vtpDataDecode(new_data);
-			   }
-			   for(int mm=0;mm<6;mm++)
-				 vtp_past_hel[mm] = vtp_data.helicity[mm];
 
-			   VTP->Fill();
+
+      unsigned int header = 0;
+      /* FADC block header */
+	  check = simpleGetSlotBlockHeader(TI_ROC, FADC_BANK, FADC_SLOT, &header);
+      if(check <= 0) 
+		printf("ERROR getting FADC block header\n");
+	  else{
+       faDataDecode(header);
+	   if(verbose)printf("FADC evt blk = %d, num of evts = %d\n",fadc_data.blk_num, fadc_data.n_evts);
+	   if(fadc_data.n_evts != blocklevel)
+		 printf("ERROR fadc number of events %d is not equal to blocklevel %d !\n",fadc_data.n_evts, blocklevel);
+      }
+      /* VETROC block header */
+      for(int nslot=0;nslot<4;nslot++){
+	     check = simpleGetSlotBlockHeader(TI_ROC, VETROC_BANK, vet_slotid[nslot], &header);
+         if(check <= 0) 
+		   printf("ERROR getting VETROC slot 13 block header\n");
+	     else{
+	       vetDataDecode(header);
+	     if(verbose)printf("VETROC evt blk = %d, num of evts = %d\n",vetroc_data.blk_num, vetroc_data.n_evts);
+	     if(vetroc_data.n_evts != blocklevel)
+	       printf("ERROR vetroc slot %d number of events %d is not equal to blocklevel %d !\n",vet_slotid[nslot],
+			       vetroc_data.n_evts, blocklevel);
+	     }
+	  }
+
+	  /** VTP block header **/
+	  check = simpleGetSlotBlockHeader(VTP_ROC, VTP_BANK, VTP_SLOT, &header);
+      if(check <= 0) 
+		printf("ERROR getting VTP block header\n");
+	  else{
+		vtpDataDecode(LSWAP(header));
+	    if(verbose)printf("VTP evt blk = %d, num of evts = %d\n",vetroc_data.blk_num, vetroc_data.n_evts);
+	    if(vetroc_data.n_evts != blocklevel)
+	      printf("VTP number of events %d is not equal to blocklevel %d !\n",vetroc_data.n_evts, blocklevel);
+	  }
+
+
+	  /**  loop blocks **/
+      for(int ii=0;ii<blocklevel;ii++){ 
+	      ClearTreeVar();
+	      if(firstevent)fadc_mode=-1;
+
+	      if(nevents>totalmax && totalmax != 1){
+			 totaldone = true;
+			 break;
+		  }
+          if((long long)nevents%10000==0) printf("  Event number = %llu **\n",(long long)nevents);
+          
+		  evtype = simpTrigBuf2[ii];
+		  unsigned int tmpdata;
+	      tmpdata = simpTrigRocBuf1[ii*3+2];	  
+		  if((tmpdata & 0xffff0000)== 0xda560000){
+			tHelicity = (tmpdata & 0x20)>>5;
+			tMPS = (tmpdata & 0x10)>>4;
+		  }
+		  else
+			printf("Couldn't find helicity bits !!\n");
+
+		  unsigned int *simpDataBuf = NULL;
+		  int simpLen=0;
+		  /** FADC event data **/
+          simpLen = simpleGetSlotEventData(TI_ROC, FADC_BANK, FADC_SLOT, ii, &simpDataBuf);
+		  if(simpLen <= 0)
+			printf("ERROR fadc event data length %d <= 0 \n",simpLen);
+	      else{
+			for(int idata = 0; idata < simpLen; idata++)
+			   faDataDecode(simpDataBuf[idata]);
+
+			if(firstevent){
+				 fadc_mode = GetFadcMode();
+				 if(fadc_mode == RAW_MODE)
+                    T->Branch("fadc_rawADC", frawdata, Form("frawdata[%i][%i]/I",FADC_NCHAN,MAXRAW)); 
+			 }
+		  }
+
+		  /** VETROC event data **/
+		  for(int nslot=0;nslot<4;nslot++){
+			  simpLen = 0;
+			  simpDataBuf = NULL;
+			  simpLen = simpleGetSlotEventData(TI_ROC, VETROC_BANK, vet_slotid[nslot], ii, &simpDataBuf);
+		      if(simpLen <= 0)
+		     	printf("ERROR vetroc slot %d event data length %d <= 0 \n",vet_slotid[nslot],simpLen);
+	          else{
+		    	for(int idata = 0; idata < simpLen; idata++)
+			      vetDataDecode(simpDataBuf[idata]);
+		      }
+		  }
+
+		  /**  VTP event data **/
+		  simpLen = 0;
+		  simpDataBuf = NULL;
+		  simpLen = simpleGetSlotEventData(VTP_ROC, VTP_BANK, VTP_SLOT, ii, &simpDataBuf);
+		  if(simpLen <= 0)
+			printf("ERROR vtp event data length %d <= 0 \n",simpLen);
+	      else{
+			for(int idata = 0; idata < simpLen; idata++){
+			   unsigned int new_data;
+			   new_data = LSWAP(simpDataBuf[idata]);
+			   vtpDataDecode(new_data);
 			}
+			for(int mm=0;mm<6;mm++)
+			   vtp_past_hel[mm] = vtp_data.helicity[mm];
+		  }
 
-			nnWd += tmplen-2;
-			
-		  } // loop roc data
-		} // VTP ROC End
+          T->Fill();
+		  VTP->Fill();
+          nevents++;
+	  } // loop over block levels
+
+	  /**  scaler data decode **/
+/*	  unsigned int *simpScalBuf = NULL;
+	  int simpScalLen=0;
+      simpScalLen = simpleGetSlotEventData(TI_ROC, SCALER_BANK, SCALER_SLOT, ii, &simpDataBuf);
+		  if(simpLen <= 0)
+			printf("ERROR fadc event data length %d <= 0 \n",simpLen);
+	      else{
+			for(int idata = 0; idata < simpLen; idata++)
+			   faDataDecode(simpDataBuf[idata]);
+
+			if(firstevent){
+				 fadc_mode = GetFadcMode();
+				 if(fadc_mode == RAW_MODE)
+                    T->Branch("fadc_rawADC", frawdata, Form("frawdata[%i][%i]/I",FADC_NCHAN,MAXRAW)); 
+			 }
+		  }
+
+	  for(int ii=0;ii<blocklevel;ii++){
+	
+	  }
+*/
+      if(totaldone) break;
 
 
+/*
 		if(rocID[nROC]==TI_ROC){  //TI ROC have FADC, VETROC, SCALER
 		  while(nnWd<rocLen[nROC]){
 
@@ -249,30 +400,6 @@ int main ()
 		    if(verbose)printf("bank tag = %d (data = 0x%x)\n",tmpBank,buf[indx+nnWd]);
 			nnWd++;
 
-			if(tmpBank == FADC_BANK){
-			   if( buf[indx+nnWd] == FIRSTWORD_FADC) nnWd++; // skip the FADC special header;
-			   Int_t fadc_words = buf[indx+nnWd]+1;    // num of FADC words
-
-			   // 0xf800fafa is a dummy FADC data
-
-			   for(int kk=2;kk<fadc_words;kk++){
-				   faDataDecode(buf[indx+nnWd+kk]);
-			   }
-			   if(firstevent){
-				 fadc_mode = GetFadcMode();
-				 if(fadc_mode == RAW_MODE)
-                    T->Branch("fadc_rawADC", frawdata, Form("frawdata[%i][%i]/I",FADC_NCHAN,MAXRAW)); 
-			   }
-			   nnWd += fadc_words; 
-			} //FADC bank
-
-			if(tmpBank == VETROC_BANK){
-			   for(int kk=0; kk<tmplen-2; kk++){
-			     if( buf[indx+nnWd+kk] == FIRSTWORD_VETROC) continue;// skip the vetroc special header
-				   vetDataDecode(buf[indx+nnWd+kk]);
-			   }
-			   nnWd += tmplen-2; 
-			} //VETROC bank
 
 			if(tmpBank == SCALER_BANK){
 			  int scaler_nwds = tmplen-2;
@@ -313,7 +440,7 @@ int main ()
 	  } // loop ROCs
 
       T->Fill();
-	  if(firstevent) firstevent = false;
+*/	  if(firstevent) firstevent = false;
     }
 
     /* free the event buffer and wait for next one */

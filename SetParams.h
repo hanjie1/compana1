@@ -8,6 +8,7 @@
 
 #define NBANK          3
 #define FADC_BANK      3
+#define FADC_SLOT      3 
 #define VETROC_BANK    4
 #define SCALER_BANK    6
 #define EPLANEA_SLOT   13
@@ -17,6 +18,7 @@
 #define VTPSCALER_SLOT 17
 
 #define VTP_BANK       0x56
+#define VTP_SLOT       11 
 
 const int FADC_NCHAN=8;  // FADC maximum number of channels
 const int MAXRAW=280;	 // FADC raw mode maximum window width
