@@ -3,6 +3,7 @@
 #include <string.h>
 #include <inttypes.h>
 #include <iostream>
+#include <fstream>
 #include "evio.h"
 
 #include "TROOT.h"
@@ -33,19 +34,21 @@ Int_t scaldat[32]={0};
 int main ()
 {
   int run_number=0;
-  int indx, bt, dt, blk, handle, nevents, status, nWords, version;
+  int indx, bt, dt, blk, handle, status, nWords, version;
+  ULong64_t nevents;
   int pe;
   unsigned int blocklevel = 1;
   uint32_t *buf, dLen, bufLen;
   char *dictionary = NULL;
   bool eventbyevent = true; 
-  int maxevents = 1e9;
-  Int_t totalmax=1000;
+  ULong64_t maxevents = 5e9;
+  ULong64_t totalmax=1000;
   bool firstevent = true;
   int check;
   bool totaldone = false;
   bool has_scaler = false;
   int vet_slotid[4]={EPLANEA_SLOT,EPLANEB_SLOT,EPLANEC_SLOT,EPLANED_SLOT};
+  int ndatafile = 0;
    
 
   cout<<"Which run? ";
@@ -60,6 +63,7 @@ int main ()
   T->Branch("evtype", &evtype, "evtype/I"); 
   T->Branch("helicity", &tHelicity, "tHelicity/I"); 
   T->Branch("MPS", &tMPS, "tMPS/I"); 
+  T->Branch("ti_timpestamp", &ti_timestamp, "ti_timestamp/l"); 
   T->Branch("fadc_mode", &fadc_mode, "fadc_mode/I"); 
   T->Branch("fadc_a", fadc_int, Form("fadc_int[%i]/I",FADC_NCHAN)); 
   T->Branch("fadc_t", fadc_time, Form("fadc_time[%i]/I",FADC_NCHAN)); 
@@ -114,16 +118,27 @@ int main ()
   VTP->Branch("last_mps_time",&last_mps_time,"last_mps_time/I");
   VTP->Branch("hel_win_cnt",&hel_win_cnt,"hel_win_cnt/I");
 
-
+  nevents=1;
   /* Open file  */
+  while(ndatafile<20){ // loop all data files
   char datapath[100];
-  sprintf(datapath,"/home/compton/data2/vtpCompton_%d.dat.0",run_number);
+  sprintf(datapath,"/home/compton/data2/vtpCompton_%d.dat.%d",run_number,ndatafile);
+
+  ifstream infile(datapath);
+  if(!infile){
+	printf("Can't find file %s....stop here\n",datapath);
+	break;
+  }
 
   if ( (status = evOpen(datapath, (char*)"r",  &handle)) < 0) 
   {
     printf("Unable to open file %s status = %d\n",datapath,status);
     exit(-1);
   } 
+  else
+	printf("Open file /home/compton/data2/vtpCompton_%d.dat.%d\n",run_number,ndatafile);
+
+  ndatafile++;
 
   /* Get evio version # of file */
   status = evIoctl(handle, (char*)"v", &version);
@@ -175,7 +190,6 @@ int main ()
 
   /* Loop through getting event blocks one at a time and print basic infomation
      about each block */
-  nevents=1;
   while ((status = evReadAlloc(handle, &buf, &bufLen))==0) 
     //while ((evReadAlloc(handle, &buf, &bufLen))!= EOF && (evReadAlloc(handle, &buf, &bufLen))==0) 
   { /* read the event and allocate the correct size buffer */
@@ -185,7 +199,7 @@ int main ()
     dt  = ((buf[1]&0xff00)>>8);       /* Data Type */
     blk = buf[1]&0xff;                /* Event Block size */
 
-    if(verbose) printf("    BLOCK #%d,  Bank tag = 0x%04x, Data type = 0x%04x,  Total len = %d words\n", nevents, bt, dt, nWords);
+    if(verbose) printf("    BLOCK #%llu,  Bank tag = 0x%04x, Data type = 0x%04x,  Total len = %d words\n", nevents, bt, dt, nWords);
 
     /* Check on what type of event block this is */
     if((bt >= 0xff00)> 0) 
@@ -233,10 +247,10 @@ int main ()
    
 	  unsigned long long *simpTrigBuf1 = NULL;
 	  tbLen1 = simpleGetTriggerBankTimeSegment(&simpTrigBuf1);
-	  int fevtNum = simpTrigBuf1[0];
+	  ULong64_t fevtNum = simpTrigBuf1[0];
 	  if(fevtNum != nevents) printf("The event number from TI does not match the counter !\n");
 
-	  if(verbose)printf("Event number for the first event in the block = %d \n",fevtNum);
+	  if(verbose)printf("Event number for the first event in the block = %llu \n",fevtNum);
 
 	  unsigned short *simpTrigBuf2 = NULL;
 	  tbLen2 = simpleGetTriggerBankTypeSegment(&simpTrigBuf2);
@@ -319,8 +333,9 @@ int main ()
 			 totaldone = true;
 			 break;
 		  }
-          if((long long)nevents%10000==0) printf("  Event number = %llu **\n",(long long)nevents);
-          
+          if(nevents%100000==0) printf("  Event number = %llu **\n",nevents);
+         
+		  ti_timestamp = simpTrigBuf1[ii+1]; 
 		  evtype = simpTrigBuf2[ii];
 		  unsigned int tmpdata;
 	      tmpdata = simpTrigRocBuf1[ii*3+2];	  
@@ -426,27 +441,30 @@ int main ()
     }
 
     if(nevents > maxevents) {
-      printf("Completed %d events!\n", nevents-1); 
+      printf("Completed %llu events!\n", nevents-1); 
       break; 
     }
 
-  } // End of loop through event blocks
+  } // End of loop one data file
 
+  if(totaldone) break;
   if ( status == EOF ) 
   {
-    printf("Found end-of-file; total %d events. \n", nevents);
+    printf("Found end-of-file; total %llu events. \n", nevents);
   }
   else if(status != 0)
   {
     printf("Error reading file (status = %d, quit\n",status);
+	exit(-1);
   }
-
+  evClose(handle);
+  }  // loop all data files
 
   T->Write(); 
   E->Write(); 
   VTP->Write(); 
   hfile->Close(); 
-  evClose(handle);
+ // evClose(handle);
 
   exit(0);
 
@@ -466,6 +484,7 @@ void ClearTreeVar(){
      tHelicity=0;  
      tMPS=0;	   
      evtype=0;    
+	 ti_timestamp = 0;
 
 	 memset(fadc_int, 0, FADC_NCHAN*sizeof(fadc_int[0]));
 	 memset(fadc_time, 0, FADC_NCHAN*sizeof(fadc_time[0]));

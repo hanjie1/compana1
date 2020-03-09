@@ -4,6 +4,7 @@
 int tHelicity;  //TS6 bit, helicity level
 int tMPS;      //TS5 bit, TSettle level
 int evtype;    // event type;
+ULong64_t ti_timestamp;  //time stamp from TI
 
 
 /***  FADC tree varibles  ***/
