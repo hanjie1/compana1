@@ -84,6 +84,19 @@ void vetDataDecode(unsigned int data)
       vetroc_data.time_H = (data & 0xFFFFFF);
       if( i_print )
         printf("%8X - TRIGGER TIME upper - time = %08x\n", data, vetroc_data.time_H);
+
+	  if(vetroc_data.slot_id_evt == EPLANEA_SLOT){
+	   	eplaneA_trigtime = (vetroc_data.time_H << 24) | vetroc_data.time_L;
+	  }
+	  if(vetroc_data.slot_id_evt == EPLANEB_SLOT){ 
+		eplaneB_trigtime = (vetroc_data.time_H << 24) | vetroc_data.time_L;
+	  }
+	  if(vetroc_data.slot_id_evt == EPLANEC_SLOT){
+	 	 eplaneC_trigtime = (vetroc_data.time_H << 24) | vetroc_data.time_L;
+	  }
+	  if(vetroc_data.slot_id_evt == EPLANED_SLOT){
+	   	eplaneD_trigtime = (vetroc_data.time_H << 24) | vetroc_data.time_L;
+	  }
     }
       break;
 

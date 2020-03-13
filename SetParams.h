@@ -20,7 +20,8 @@
 #define VTP_BANK       0x56
 #define VTP_SLOT       11 
 
-const int FADC_NCHAN=8;  // FADC maximum number of channels
-const int MAXRAW=280;	 // FADC raw mode maximum window width
-const int VETROC_NCHAN = 128; //VETROC maximum number of channels;
-const int VETROC_MAXHIT = 512; //VETROC maximum hits;
+const int FADC_NCHAN=8;        // FADC maximum number of channels
+const int MAXRAW=280;	       // FADC raw mode maximum window width
+const int VETROC_NCHAN = 128;  // VETROC maximum number of channels;
+const int VETROC_MAXHIT = 512; // VETROC maximum hits;
+const int delay_win = 8;       // helicity delay windows

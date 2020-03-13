@@ -19,6 +19,7 @@
 #include "TIDecode.h"
 #include "VETROCDecode.h"
 #include "VTPDecode.h"
+#include "FindHelicity.h"
 
 using namespace std;
 
@@ -44,11 +45,13 @@ int main ()
   ULong64_t maxevents = 5e9;
   ULong64_t totalmax=1000;
   bool firstevent = true;
+  bool findquad = false;
   int check;
   bool totaldone = false;
   bool has_scaler = false;
   int vet_slotid[4]={EPLANEA_SLOT,EPLANEB_SLOT,EPLANEC_SLOT,EPLANED_SLOT};
   int ndatafile = 0;
+  Int_t pre_helicity = 0;
    
 
   cout<<"Which run? ";
@@ -64,24 +67,30 @@ int main ()
   T->Branch("helicity", &tHelicity, "tHelicity/I"); 
   T->Branch("MPS", &tMPS, "tMPS/I"); 
   T->Branch("ti_timpestamp", &ti_timestamp, "ti_timestamp/l"); 
+  T->Branch("fadc_trigtime", &fadc_trigtime, "fadc_trigtime/l"); 
   T->Branch("fadc_mode", &fadc_mode, "fadc_mode/I"); 
   T->Branch("fadc_a", fadc_int, Form("fadc_int[%i]/I",FADC_NCHAN)); 
   T->Branch("fadc_t", fadc_time, Form("fadc_time[%i]/I",FADC_NCHAN)); 
   T->Branch("fadc_a1", fadc_int_1, Form("fadc_int_1[%i]/I",FADC_NCHAN)); 
   T->Branch("fadc_t1", fadc_time_1, Form("fadc_time_1[%i]/I",FADC_NCHAN)); 
   T->Branch("fadc_nhit", fadc_nhit, Form("fadc_nhit[%i]/I",FADC_NCHAN)); 
+
+  T->Branch("eplaneA_trigtime", &eplaneA_trigtime, "eplaneA_trigtime/l"); 
   T->Branch("eplaneA_nhits", &eplaneA_nhits, "eplaneA_nhits/I");
   T->Branch("eplaneA_chan", eplaneA_chan, "eplaneA_chan[eplaneA_nhits]/I"); 
   T->Branch("eplaneA_rt", eplaneA_rt, "eplaneA_rt[eplaneA_nhits]/I"); 
   T->Branch("eplaneA_ft", eplaneA_ft, "eplaneA_ft[eplaneA_nhits]/I"); 
+  T->Branch("eplaneB_trigtime", &eplaneB_trigtime, "eplaneB_trigtime/l"); 
   T->Branch("eplaneB_nhits", &eplaneB_nhits, "eplaneB_nhits/I");
   T->Branch("eplaneB_chan", eplaneB_chan, "eplaneB_chan[eplaneB_nhits]/I"); 
   T->Branch("eplaneB_rt", eplaneB_rt, "eplaneB_rt[eplaneB_nhits]/I"); 
   T->Branch("eplaneB_ft", eplaneB_ft, "eplaneB_ft[eplaneB_nhits]/I"); 
+  T->Branch("eplaneC_trigtime", &eplaneC_trigtime, "eplaneC_trigtime/l"); 
   T->Branch("eplaneC_nhits", &eplaneC_nhits, "eplaneC_nhits/I");
   T->Branch("eplaneC_chan", eplaneC_chan, "eplaneC_chan[eplaneC_nhits]/I"); 
   T->Branch("eplaneC_rt", eplaneC_rt, "eplaneC_rt[eplaneC_nhits]/I"); 
   T->Branch("eplaneC_ft", eplaneC_ft, "eplaneC_ft[eplaneC_nhits]/I"); 
+  T->Branch("eplaneD_trigtime", &eplaneD_trigtime, "eplaneD_trigtime/l"); 
   T->Branch("eplaneD_nhits", &eplaneD_nhits, "eplaneD_nhits/I");
   T->Branch("eplaneD_chan", eplaneD_chan, "eplaneD_chan[eplaneD_nhits]/I"); 
   T->Branch("eplaneD_rt", eplaneD_rt, "eplaneD_rt[eplaneD_nhits]/I"); 
@@ -102,6 +111,7 @@ int main ()
   E->Branch("scaldat", scaldat, "scaldat[32]/I"); 
 
   TTree *VTP = new TTree("VTP","vtp data");
+  VTP->Branch("vtp_trigtime", &vtp_trigtime, "vtp_trigtime/l"); 
   VTP->Branch("eplaneA_scalcnt",vtp_A_scalcnt,Form("vtp_A_scalcnt[%d]/I",VETROC_NCHAN));
   VTP->Branch("eplaneB_scalcnt",vtp_B_scalcnt,Form("vtp_B_scalcnt[%d]/I",VETROC_NCHAN));
   VTP->Branch("eplaneC_scalcnt",vtp_C_scalcnt,Form("vtp_C_scalcnt[%d]/I",VETROC_NCHAN));
@@ -117,6 +127,8 @@ int main ()
   VTP->Branch("vtp_past_hel",vtp_past_hel,"vtp_past_hel[6]/I");
   VTP->Branch("last_mps_time",&last_mps_time,"last_mps_time/I");
   VTP->Branch("hel_win_cnt",&hel_win_cnt,"hel_win_cnt/I");
+  VTP->Branch("current_helicity", &current_helicity, "current_helicity/I"); 
+  VTP->Branch("vtp_helicity", &vtp_helicity, "vtp_helicity/I"); 
 
   nevents=1;
   /* Open file  */
@@ -390,7 +402,31 @@ int main ()
 			}
 			for(int mm=0;mm<6;mm++)
 			   vtp_past_hel[mm] = vtp_data.helicity[mm];
-		  }
+	
+			vtp_helicity = (vtp_past_hel[0] & 0x1);   // most recent helicity seen by VTP
+			unsigned long pred_bit = 0;   		// predict bit in 8 windows
+			if(firstevent){
+			  findquad = FindQuad(vtp_past_hel);          // find first quad and initialize fgShreg and fgShreg_earlier
+			  if(findquad){
+				for(int mm=0; mm<delay_win/4; mm++){
+				 	 pred_bit = ranBit(2,1);      // fgShreg is update 8 windows
+					 printf("pred %d: %d   fgShreg:  %x\n",mm,pred_bit,fgShreg);
+				}
+				current_helicity = pred_bit;
+				printf("Current heli %d\n",current_helicity);
+			  }
+			}
+/*
+			if(findquad && (firstevent == false)){
+			   pred_bit = PredictHelicity(vtp_past_hel);
+			   if(pred_bit == -1) current_helicity = pre_helicity;         // helicity is not update
+			   else{
+
+			   }
+			  
+			}
+			pre_helicity = current_helicity;
+*/		  }
 
 		  /** scaler data **/
 		  if(has_scaler && ii<nscal){
@@ -416,13 +452,12 @@ int main ()
           T->Fill();
 		  VTP->Fill();
           nevents++;
+
+	      if(firstevent) firstevent = false;
 	  } // loop over block levels
 
 
       if(totaldone) break;
-
-
-	  if(firstevent) firstevent = false;
     }
 
     /* free the event buffer and wait for next one */
@@ -493,23 +528,28 @@ void ClearTreeVar(){
 	 memset(fadc_nhit, 0, FADC_NCHAN*sizeof(fadc_nhit[0]));
 	 memset(ftdc_nhit, 0, FADC_NCHAN*sizeof(ftdc_nhit[0]));
      memset(frawdata, 0, FADC_NCHAN*MAXRAW*sizeof(frawdata[0][0]));	
+	 fadc_trigtime = 0;
 	 nrawdata=0;
 	 
+	 eplaneA_trigtime = 0;
 	 eplaneA_nhits=0;
 	 memset(eplaneA_chan, 0, VETROC_MAXHIT*sizeof(eplaneA_chan[0]));
 	 memset(eplaneA_rt, 0, VETROC_MAXHIT*sizeof(eplaneA_rt[0]));
 	 memset(eplaneA_ft, 0, VETROC_MAXHIT*sizeof(eplaneA_ft[0]));
 
+	 eplaneB_trigtime = 0;
 	 eplaneB_nhits=0;
 	 memset(eplaneB_chan, 0, VETROC_MAXHIT*sizeof(eplaneB_chan[0]));
 	 memset(eplaneB_rt, 0, VETROC_MAXHIT*sizeof(eplaneB_rt[0]));
 	 memset(eplaneB_ft, 0, VETROC_MAXHIT*sizeof(eplaneB_ft[0]));
 
+	 eplaneC_trigtime = 0;
 	 eplaneC_nhits=0;
 	 memset(eplaneC_chan, 0, VETROC_MAXHIT*sizeof(eplaneC_chan[0]));
 	 memset(eplaneC_rt, 0, VETROC_MAXHIT*sizeof(eplaneC_rt[0]));
 	 memset(eplaneC_ft, 0, VETROC_MAXHIT*sizeof(eplaneC_ft[0]));
 
+	 eplaneD_trigtime = 0;
 	 eplaneD_nhits=0;
 	 memset(eplaneD_chan, 0, VETROC_MAXHIT*sizeof(eplaneD_chan[0]));
 	 memset(eplaneD_rt, 0, VETROC_MAXHIT*sizeof(eplaneD_rt[0]));
@@ -518,6 +558,7 @@ void ClearTreeVar(){
      ClearScaler();
 
 	 ClearVTP();  // clear some vtp_data 
+	 vtp_trigtime = 0;
 	 memset(vtp_A_scalcnt, 0, VETROC_NCHAN*sizeof(vtp_A_scalcnt[0]));
 	 memset(vtp_B_scalcnt, 0, VETROC_NCHAN*sizeof(vtp_B_scalcnt[0]));
 	 memset(vtp_C_scalcnt, 0, VETROC_NCHAN*sizeof(vtp_C_scalcnt[0]));
@@ -533,6 +574,8 @@ void ClearTreeVar(){
      last_mps_time = 0;
 	 memset(vtp_past_hel, 0, 6*sizeof(vtp_past_hel[0]));
 	 hel_win_cnt = 0;
+	 current_helicity = 0;
+	 vtp_helicity = 0;
 
 }
 

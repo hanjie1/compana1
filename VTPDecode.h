@@ -99,6 +99,7 @@ void vtpDataDecode(unsigned int data){
 		 vtp_data.trig_time_h = (data & 0xffffff);
 	     if(i_print)
 		    printf("%8X - TRIGGER TIME - trigger time upper = %d\n", data, vtp_data.trig_time_h);
+		 vtp_trigtime = ( vtp_data.trig_time_h<<24 ) | vtp_data.trig_time_l;
 	  }
 	  break;
     case 12:

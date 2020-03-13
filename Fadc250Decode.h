@@ -13,8 +13,6 @@ struct fadc_data_struct
   unsigned int time_now;
   unsigned int time_1;
   unsigned int time_2;
-  unsigned int time_3;
-  unsigned int time_4;
   unsigned int chan;
   unsigned int width;
   unsigned int valid_1;
@@ -146,26 +144,11 @@ void faDataDecode(unsigned int data)
           if( i_print )
         printf("%8X - TRIGGER TIME 2 - time = %08x\n", data, fadc_data.time_2);
           fadc_data.time_now = 2;
-        }
-      else if( time_last == 2 )
-        {
-          fadc_data.time_3 = (data & 0xFFFFFF);
-          if( i_print )
-        printf("%8X - TRIGGER TIME 3 - time = %08x\n", data, fadc_data.time_3);
-          fadc_data.time_now = 3;
-        }
-      else if( time_last == 3 )
-        {
-          fadc_data.time_4 = (data & 0xFFFFFF);
-          if( i_print )
-        printf("%8X - TRIGGER TIME 4 - time = %08x\n", data, fadc_data.time_4);
-          fadc_data.time_now = 4;
-        }
-      else
-        if( i_print )
-          printf("%8X - TRIGGER TIME - (ERROR)\n", data);
 
-      time_last = fadc_data.time_now;
+		  fadc_trigtime = (fadc_data.time_2 << 24) | fadc_data.time_1; 
+        }
+	  else
+		printf("FADC Warning: trigger time is more than 2 words!! \n");
     }
       break;
     case 4:     /* WINDOW RAW DATA */
