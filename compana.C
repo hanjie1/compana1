@@ -52,6 +52,9 @@ int main ()
   int vet_slotid[4]={EPLANEA_SLOT,EPLANEB_SLOT,EPLANEC_SLOT,EPLANED_SLOT};
   int ndatafile = 0;
   Int_t pre_helicity = 0;
+  int helpos = 0;
+  Int_t pre_vtp_past_hel[7]={0};    // save the vtp_past_hel in the previous event  
+  Int_t pre_last_mps_time=0;         // save the last_mps_time in the previous event  
    
 
   cout<<"Which run? ";
@@ -352,7 +355,7 @@ int main ()
 		  unsigned int tmpdata;
 	      tmpdata = simpTrigRocBuf1[ii*3+2];	  
 		  if((tmpdata & 0xffff0000)== 0xda560000){
-			tHelicity = (tmpdata & 0x20)>>5;
+			tHelicity = InvertBit((tmpdata & 0x20)>>5);    // the helicity is inverted when sent to DAQ
 			tMPS = (tmpdata & 0x10)>>4;
 		  }
 		  else
@@ -403,30 +406,37 @@ int main ()
 			for(int mm=0;mm<6;mm++)
 			   vtp_past_hel[mm] = vtp_data.helicity[mm];
 	
-			vtp_helicity = (vtp_past_hel[0] & 0x1);   // most recent helicity seen by VTP
-			unsigned long pred_bit = 0;   		// predict bit in 8 windows
+			vtp_helicity = InvertBit((vtp_past_hel[0] & 0x1));   // most recent helicity seen by VTP
+			int pred_bit = 0;   		      // predict bit in 8 windows
 			if(firstevent){
-			  findquad = FindQuad(vtp_past_hel);          // find first quad and initialize fgShreg and fgShreg_earlier
+			  findquad = FindQuad(vtp_past_hel, &helpos);   // find first quad, and initialize fgShreg and fgShreg_earlier, return helicity window position
+			  helpos = helpos + 1;    //vtp_past_hel is one window behind the in-time helicity
 			  if(findquad){
-				for(int mm=0; mm<delay_win/4; mm++){
-				 	 pred_bit = ranBit(2,1);      // fgShreg is update 8 windows
-					 printf("pred %d: %d   fgShreg:  %x\n",mm,pred_bit,fgShreg);
+				for(int mm=0; mm<delay_win/4-1; mm++)pred_bit=ranBit(2,1);      // fgShreg is update 8 windows
+				
+				if( helpos<4 ) current_helicity = GetHelicity(&helpos);   // get the helicity for the current window and update "helpos"
+				if( helpos==4 ){
+				  current_helicity = ranBit(2,1);
+				  helpos = 1;
 				}
-				current_helicity = pred_bit;
-				printf("Current heli %d\n",current_helicity);
+				if( helpos>4 ) printf("The helicity window position %d is bigger than 4 !!\n",helpos);
 			  }
 			}
-/*
-			if(findquad && (firstevent == false)){
-			   pred_bit = PredictHelicity(vtp_past_hel);
-			   if(pred_bit == -1) current_helicity = pre_helicity;         // helicity is not update
-			   else{
 
-			   }
-			  
+			if(findquad && (firstevent == false)){
+			   int updateWin = HelicityUpdateWin(pre_vtp_past_hel, vtp_past_hel, pre_last_mps_time, last_mps_time);
+			   if(updateWin == 0) current_helicity = pre_helicity;         // helicity is not update
+			   else current_helicity = PredictHelicity(updateWin, &helpos);
+			   if(verbose) 
+				 printf("event %llu  Update %d helicity windows\n",nevents,updateWin); 
 			}
 			pre_helicity = current_helicity;
-*/		  }
+ 
+			for(int mm=0;mm<6;mm++)
+			   pre_vtp_past_hel[mm] = vtp_past_hel[mm];
+
+			pre_last_mps_time = last_mps_time;
+		  }
 
 		  /** scaler data **/
 		  if(has_scaler && ii<nscal){
