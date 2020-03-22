@@ -18,7 +18,6 @@ struct vetroc_data_struct
   unsigned int tdc;
 }vetroc_data;
 
-bool newhit = true;
 
 void vetDataDecode(unsigned int data)
 {
@@ -110,7 +109,6 @@ void vetDataDecode(unsigned int data)
 
       if(vetroc_data.slot_id_evt == EPLANEA_SLOT){    /* vetroc plane A */
 		 if(vetroc_data.edge==0){
-		   newhit=true;
 		   eplaneA_chan[eplaneA_nhits] = vetroc_data.chan;
 		   eplaneA_rt[eplaneA_nhits] = vetroc_data.tdc;
 		   eplaneA_nhits++;
@@ -118,16 +116,14 @@ void vetDataDecode(unsigned int data)
 			 printf("VETROC Warning: too many hits (%d) in plane A !!\n",eplaneA_nhits);
 		 }
 		 else{
-		   if(newhit==true){
-			 eplaneA_ft[eplaneA_nhits-1] = vetroc_data.tdc;
-			 newhit = false;
-		   }
+		   eplaneA_ft_chan[eplaneA_nhits_1] = vetroc_data.chan;
+		   eplaneA_ft[eplaneA_nhits_1] = vetroc_data.tdc;
+		   eplaneA_nhits_1++;
 		 }
 	   }
 
       if(vetroc_data.slot_id_evt == EPLANEB_SLOT){    /* vetroc plane B */
 		 if(vetroc_data.edge==0){
-		   newhit=true;
 		   eplaneB_chan[eplaneB_nhits] = vetroc_data.chan;
 		   eplaneB_rt[eplaneB_nhits] = vetroc_data.tdc;
 		   eplaneB_nhits++;
@@ -135,16 +131,14 @@ void vetDataDecode(unsigned int data)
 			 printf("VETROC Warning: too many hits (%d) in plane B !!\n",eplaneB_nhits);
 		 }
 		 else{
-		   if(newhit==true){
-			 eplaneB_ft[eplaneB_nhits-1] = vetroc_data.tdc;
-			 newhit = false;
-		   }
+		   eplaneB_ft_chan[eplaneB_nhits_1] = vetroc_data.chan;
+		   eplaneB_ft[eplaneB_nhits_1] = vetroc_data.tdc;
+		   eplaneB_nhits_1++;
 		 }
 	   }
 
       if(vetroc_data.slot_id_evt == EPLANEC_SLOT){    /* vetroc plane C */
 		 if(vetroc_data.edge==0){
-		   newhit=true;
 		   eplaneC_chan[eplaneC_nhits] = vetroc_data.chan;
 		   eplaneC_rt[eplaneC_nhits] = vetroc_data.tdc;
 		   eplaneC_nhits++;
@@ -152,16 +146,14 @@ void vetDataDecode(unsigned int data)
 			 printf("VETROC Warning: too many hits (%d) in plane C !!\n",eplaneC_nhits);
 		 }
 		 else{
-		   if(newhit==true){
-			 eplaneC_ft[eplaneC_nhits-1] = vetroc_data.tdc;
-			 newhit = false;
-		   }
+		   eplaneC_ft_chan[eplaneC_nhits_1] = vetroc_data.chan;
+		   eplaneC_ft[eplaneC_nhits_1] = vetroc_data.tdc;
+		   eplaneC_nhits_1++;
 		 }
 	   }
 
       if(vetroc_data.slot_id_evt == EPLANED_SLOT){    /* vetroc plane D */
 		 if(vetroc_data.edge==0){
-		   newhit=true;
 		   eplaneD_chan[eplaneD_nhits] = vetroc_data.chan;
 		   eplaneD_rt[eplaneD_nhits] = vetroc_data.tdc;
 		   eplaneD_nhits++;
@@ -169,15 +161,14 @@ void vetDataDecode(unsigned int data)
 			 printf("VETROC Warning: too many hits (%d) in plane D !!\n",eplaneD_nhits);
 		 }
 		 else{
-		   if(newhit==true){
-			 eplaneD_ft[eplaneD_nhits-1] = vetroc_data.tdc;
-			 newhit = false;
-		   }
+		   eplaneD_ft_chan[eplaneD_nhits_1] = vetroc_data.chan;
+		   eplaneD_ft[eplaneD_nhits_1] = vetroc_data.tdc;
+		   eplaneD_nhits_1++;
 		 }
 	   }
 
 	  if( i_print ){
-		printf("%8X - TDC Hits, Edge = %d, chan = %d, TDC = %d\n",data, vetroc_data.edge,vetroc_data.chan,
+		printf("%8X - TDC Hits,Slot = %d, Edge = %d, chan = %d, TDC = %d\n",data, vetroc_data.slot_id_evt,vetroc_data.edge,vetroc_data.chan,
 				vetroc_data.tdc);
 	  }
       break;

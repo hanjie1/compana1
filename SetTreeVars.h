@@ -24,25 +24,33 @@ ULong64_t eplaneB_trigtime;              // eplane B trigger time
 ULong64_t eplaneC_trigtime;              // eplane C trigger time
 ULong64_t eplaneD_trigtime;              // eplane D trigger time
 
-Int_t eplaneA_nhits;				  // plane A total number of hits
-Int_t eplaneA_chan[VETROC_MAXHIT];   // vetroc channel number
-Int_t eplaneA_rt[VETROC_MAXHIT];     // vetroc hit tdc rising time
-Int_t eplaneA_ft[VETROC_MAXHIT];     // vetroc hit tdc falling time
+Int_t eplaneA_nhits;				    // plane A total number of hits for rising edge
+Int_t eplaneA_nhits_1;				    // plane A total number of hits for falling edge
+Int_t eplaneA_chan[VETROC_MAXHIT];      // vetroc channel number for rising edge
+Int_t eplaneA_rt[VETROC_MAXHIT];        // vetroc hit tdc rising time
+Int_t eplaneA_ft[VETROC_MAXHIT];        // vetroc hit tdc falling time
+Int_t eplaneA_ft_chan[VETROC_MAXHIT];   // vetroc channel number for falling edge
 
-Int_t eplaneB_nhits;				  // plane B total number of hits
+Int_t eplaneB_nhits;				  // plane B total number of hits for rising edge
+Int_t eplaneB_nhits_1;				  // plane B total number of hits for falling edge
 Int_t eplaneB_chan[VETROC_MAXHIT];   // vetroc channel number
 Int_t eplaneB_rt[VETROC_MAXHIT];     // vetroc hit tdc rising time
-Int_t eplaneB_ft[VETROC_MAXHIT];     // vetroc hit tdc falling time
+Int_t eplaneB_ft[VETROC_MAXHIT];     // vetroc hit tdc falling time 
+Int_t eplaneB_ft_chan[VETROC_MAXHIT];   // vetroc channel number for falling edge
 
-Int_t eplaneC_nhits;				  // plane C total number of hits
+Int_t eplaneC_nhits;				  // plane C total number of hits for rising edge
+Int_t eplaneC_nhits_1;				  // plane C total number of hits for falling edge
 Int_t eplaneC_chan[VETROC_MAXHIT];   // vetroc channel number
 Int_t eplaneC_rt[VETROC_MAXHIT];     // vetroc hit tdc rising time
 Int_t eplaneC_ft[VETROC_MAXHIT];     // vetroc hit tdc falling time
+Int_t eplaneC_ft_chan[VETROC_MAXHIT];   // vetroc channel number for falling edge
 
-Int_t eplaneD_nhits;				  // plane D total number of hits
+Int_t eplaneD_nhits;				  // plane D total number of hits for rising edge
+Int_t eplaneD_nhits_1;				  // plane D total number of hits for falling edge
 Int_t eplaneD_chan[VETROC_MAXHIT];   // vetroc channel number
 Int_t eplaneD_rt[VETROC_MAXHIT];     // vetroc hit tdc rising time
 Int_t eplaneD_ft[VETROC_MAXHIT];     // vetroc hit tdc falling time
+Int_t eplaneD_ft_chan[VETROC_MAXHIT];   // vetroc channel number for falling edge
 
 /***  Scaler tree variables ***/
 Int_t clock1;						 // 40MHz clock in IPscaler channel 1
@@ -77,4 +85,6 @@ Int_t hel_win_cnt;                   // helicity window counts in past helicity
 Int_t current_helicity;				 // helicty after the delay is removed
 Int_t vtp_helicity;				     // the most recent helicity in vtp_past_hel[0] bit 0 (inverted)
 
-
+/*****  VTPScal tree variables *****/
+Int_t vtp_BCM;						 // BCM from VTP scaler
+Int_t vtp_CavPower;				     // Cavity Power from VTP scaler

@@ -16,7 +16,6 @@
 #include "SetParams.h"
 #include "SetTreeVars.h"
 #include "Fadc250Decode.h"
-#include "TIDecode.h"
 #include "VETROCDecode.h"
 #include "VTPDecode.h"
 #include "FindHelicity.h"
@@ -55,6 +54,7 @@ int main ()
   int helpos = 0;
   Int_t pre_vtp_past_hel[7]={0};    // save the vtp_past_hel in the previous event  
   Int_t pre_last_mps_time=0;         // save the last_mps_time in the previous event  
+  Int_t pre_hel_win_cnt_1 = 0;
    
 
   cout<<"Which run? ";
@@ -80,24 +80,32 @@ int main ()
 
   T->Branch("eplaneA_trigtime", &eplaneA_trigtime, "eplaneA_trigtime/l"); 
   T->Branch("eplaneA_nhits", &eplaneA_nhits, "eplaneA_nhits/I");
+  T->Branch("eplaneA_nhits_1", &eplaneA_nhits_1, "eplaneA_nhits_1/I");
   T->Branch("eplaneA_chan", eplaneA_chan, "eplaneA_chan[eplaneA_nhits]/I"); 
   T->Branch("eplaneA_rt", eplaneA_rt, "eplaneA_rt[eplaneA_nhits]/I"); 
-  T->Branch("eplaneA_ft", eplaneA_ft, "eplaneA_ft[eplaneA_nhits]/I"); 
+  T->Branch("eplaneA_ft", eplaneA_ft, "eplaneA_ft[eplaneA_nhits_1]/I"); 
+  T->Branch("eplaneA_ft_chan", eplaneA_ft_chan, "eplaneA_ft_chan[eplaneA_nhits_1]/I"); 
   T->Branch("eplaneB_trigtime", &eplaneB_trigtime, "eplaneB_trigtime/l"); 
   T->Branch("eplaneB_nhits", &eplaneB_nhits, "eplaneB_nhits/I");
+  T->Branch("eplaneB_nhits_1", &eplaneB_nhits_1, "eplaneB_nhits_1/I");
   T->Branch("eplaneB_chan", eplaneB_chan, "eplaneB_chan[eplaneB_nhits]/I"); 
   T->Branch("eplaneB_rt", eplaneB_rt, "eplaneB_rt[eplaneB_nhits]/I"); 
-  T->Branch("eplaneB_ft", eplaneB_ft, "eplaneB_ft[eplaneB_nhits]/I"); 
+  T->Branch("eplaneB_ft", eplaneB_ft, "eplaneB_ft[eplaneB_nhits_1]/I"); 
+  T->Branch("eplaneB_ft_chan", eplaneB_ft_chan, "eplaneB_ft_chan[eplaneB_nhits_1]/I"); 
   T->Branch("eplaneC_trigtime", &eplaneC_trigtime, "eplaneC_trigtime/l"); 
   T->Branch("eplaneC_nhits", &eplaneC_nhits, "eplaneC_nhits/I");
+  T->Branch("eplaneC_nhits_1", &eplaneC_nhits_1, "eplaneC_nhits_1/I");
   T->Branch("eplaneC_chan", eplaneC_chan, "eplaneC_chan[eplaneC_nhits]/I"); 
   T->Branch("eplaneC_rt", eplaneC_rt, "eplaneC_rt[eplaneC_nhits]/I"); 
-  T->Branch("eplaneC_ft", eplaneC_ft, "eplaneC_ft[eplaneC_nhits]/I"); 
+  T->Branch("eplaneC_ft", eplaneC_ft, "eplaneC_ft[eplaneC_nhits_1]/I"); 
+  T->Branch("eplaneC_ft_chan", eplaneC_ft_chan, "eplaneC_ft_chan[eplaneC_nhits_1]/I"); 
   T->Branch("eplaneD_trigtime", &eplaneD_trigtime, "eplaneD_trigtime/l"); 
   T->Branch("eplaneD_nhits", &eplaneD_nhits, "eplaneD_nhits/I");
+  T->Branch("eplaneD_nhits_1", &eplaneD_nhits_1, "eplaneD_nhits_1/I");
   T->Branch("eplaneD_chan", eplaneD_chan, "eplaneD_chan[eplaneD_nhits]/I"); 
   T->Branch("eplaneD_rt", eplaneD_rt, "eplaneD_rt[eplaneD_nhits]/I"); 
-  T->Branch("eplaneD_ft", eplaneD_ft, "eplaneD_ft[eplaneD_nhits]/I"); 
+  T->Branch("eplaneD_ft", eplaneD_ft, "eplaneD_ft[eplaneD_nhits_1]/I"); 
+  T->Branch("eplaneD_ft_chan", eplaneD_ft_chan, "eplaneD_ft_chan[eplaneD_nhits_1]/I"); 
   T->Branch("clock1", &clock1, "clock1/I");
   T->Branch("CavPower", &CavPower, "CavPower/I");
   T->Branch("BCM", &BCM, "BCM/I");
@@ -132,6 +140,11 @@ int main ()
   VTP->Branch("hel_win_cnt",&hel_win_cnt,"hel_win_cnt/I");
   VTP->Branch("current_helicity", &current_helicity, "current_helicity/I"); 
   VTP->Branch("vtp_helicity", &vtp_helicity, "vtp_helicity/I"); 
+
+  TTree *VTPScal = new TTree("VTPScal","vtp scaler tree for each helicity window");
+  VTPScal->Branch("vtp_BCM",&vtp_BCM,"vtp_BCM/I");
+  VTPScal->Branch("vtp_CavPower",&vtp_CavPower,"vtp_CavPower/I");
+
 
   nevents=1;
   /* Open file  */
@@ -461,9 +474,38 @@ int main ()
 
           T->Fill();
 		  VTP->Fill();
+		
+		  if(hel_win_cnt_1 != 0){
+		    for(Int_t kk=pre_hel_win_cnt_1; kk<hel_win_cnt_1; kk++){
+			   vtp_BCM = 0;
+			   vtp_CavPower = 0;
+			   VTPScal->Fill();
+		    }
+		    vtp_BCM = vtp_scaldat[15];
+		    vtp_CavPower = vtp_scaldat[12];
+		    VTPScal->Fill();
+		    pre_hel_win_cnt_1 = hel_win_cnt_1+1;
+		  }
           nevents++;
 
 	      if(firstevent) firstevent = false;
+
+          if(eventbyevent) {
+      		printf("Hit return for next event or q to exit; hit a or A to replay all events or certain number of events.\n");
+      		int typein = getchar(); 
+      		if(typein == 113){ totaldone= true; break;} 
+      		if(typein == 65 || typein == 97){
+			  eventbyevent=false;
+	    	  cout<<"How many events? (hit 1 for total;)";
+			  cin>>totalmax;
+	  		}
+    	   }	
+
+    	   if(nevents > maxevents) {
+      		printf("Completed %llu events!\n", nevents-1); 
+      		totaldone=true;
+		    break;	
+           }
 	  } // loop over block levels
 
 
@@ -472,23 +514,6 @@ int main ()
 
     /* free the event buffer and wait for next one */
     free(buf);
-
-    //uncomment the following to lines to view event by event
-    if(eventbyevent) {
-      printf("Hit return for next event or q to exit; hit a or A to replay all events or certain number of events.\n");
-      int typein = getchar(); 
-      if(typein == 113) break; 
-      if(typein == 65 || typein == 97){
-		eventbyevent=false;
-	    cout<<"How many events? (hit 1 for total;)";
-		cin>>totalmax;
-	  }
-    }
-
-    if(nevents > maxevents) {
-      printf("Completed %llu events!\n", nevents-1); 
-      break; 
-    }
 
   } // End of loop one data file
 
@@ -508,6 +533,7 @@ int main ()
   T->Write(); 
   E->Write(); 
   VTP->Write(); 
+  VTPScal->Write(); 
   hfile->Close(); 
  // evClose(handle);
 
@@ -543,25 +569,33 @@ void ClearTreeVar(){
 	 
 	 eplaneA_trigtime = 0;
 	 eplaneA_nhits=0;
+	 eplaneA_nhits_1=0;
 	 memset(eplaneA_chan, 0, VETROC_MAXHIT*sizeof(eplaneA_chan[0]));
+	 memset(eplaneA_ft_chan, 0, VETROC_MAXHIT*sizeof(eplaneA_ft_chan[0]));
 	 memset(eplaneA_rt, 0, VETROC_MAXHIT*sizeof(eplaneA_rt[0]));
 	 memset(eplaneA_ft, 0, VETROC_MAXHIT*sizeof(eplaneA_ft[0]));
 
 	 eplaneB_trigtime = 0;
 	 eplaneB_nhits=0;
+	 eplaneB_nhits_1=0;
 	 memset(eplaneB_chan, 0, VETROC_MAXHIT*sizeof(eplaneB_chan[0]));
+	 memset(eplaneB_ft_chan, 0, VETROC_MAXHIT*sizeof(eplaneB_ft_chan[0]));
 	 memset(eplaneB_rt, 0, VETROC_MAXHIT*sizeof(eplaneB_rt[0]));
 	 memset(eplaneB_ft, 0, VETROC_MAXHIT*sizeof(eplaneB_ft[0]));
 
 	 eplaneC_trigtime = 0;
 	 eplaneC_nhits=0;
+	 eplaneC_nhits_1=0;
 	 memset(eplaneC_chan, 0, VETROC_MAXHIT*sizeof(eplaneC_chan[0]));
+	 memset(eplaneC_ft_chan, 0, VETROC_MAXHIT*sizeof(eplaneC_ft_chan[0]));
 	 memset(eplaneC_rt, 0, VETROC_MAXHIT*sizeof(eplaneC_rt[0]));
 	 memset(eplaneC_ft, 0, VETROC_MAXHIT*sizeof(eplaneC_ft[0]));
 
 	 eplaneD_trigtime = 0;
 	 eplaneD_nhits=0;
+	 eplaneD_nhits_1=0;
 	 memset(eplaneD_chan, 0, VETROC_MAXHIT*sizeof(eplaneD_chan[0]));
+	 memset(eplaneD_ft_chan, 0, VETROC_MAXHIT*sizeof(eplaneD_ft_chan[0]));
 	 memset(eplaneD_rt, 0, VETROC_MAXHIT*sizeof(eplaneD_rt[0]));
 	 memset(eplaneD_ft, 0, VETROC_MAXHIT*sizeof(eplaneD_ft[0]));
 
