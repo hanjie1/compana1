@@ -65,5 +65,4 @@ compana.o compana.d : compana.C /site/coda/3.10/Linux-x86_64/include/evio.h \
  /u/apps/root/6.10.02/root/include/TVectorDfwd.h \
  /u/apps/root/6.10.02/root/include/TFitResultPtr.h \
  /home/compton/hanjie/compana1/simple/simpleLib.h SetParams.h \
- SetTreeVars.h Fadc250Decode.h TIDecode.h VETROCDecode.h VTPDecode.h \
- FindHelicity.h
+ SetTreeVars.h Fadc250Decode.h VETROCDecode.h VTPDecode.h FindHelicity.h
