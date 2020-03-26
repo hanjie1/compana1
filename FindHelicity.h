@@ -125,7 +125,7 @@ bool FindQuad(Int_t past_hel[6], int *helpos){
 	 int nn = 0;
 	 for(nn=quadstart; nn<maxbits;){         // initialize fgShreg
 		if(nquad<=30)pred_bit = ranBit(helbit[nn],1);   
-		if(nquad>=30)pred_bit = ranBit(2,1);   
+		if(nquad>=30 && (nn+4)<maxbits )pred_bit = ranBit(2,1);   
 		nquad++;
 		if(nquad>30 && (pred_bit != helbit[nn+4]) && (nn+4)<maxbits ){                  // check if helicity prediction is true
 			 printf("The prediction helicity does not match the real one !!\n");
@@ -144,77 +144,20 @@ bool FindQuad(Int_t past_hel[6], int *helpos){
 }
 
 
-int HelicityUpdateWin(Int_t pre_past_hel[6], Int_t past_hel[6], Int_t pre_last_mps_time, Int_t last_mps_time){
-// check if the last 28 bits of the vtp_past_hel is update
-// if it is updated, return the number of windows that is updated
-
-	int bit_num = 0;
-	int nbits = 0;
-
-	ULong64_t helbit[3];      // 3 words to save the 173 helicity bits; the 0 bit of helbit[0] is the most recent one
-	ULong64_t pre_helbit[3];
-
-
-    helbit[0]=0ull;
-    helbit[1]=0ull;
-    helbit[2]=0ull;
-    pre_helbit[0]=0ull;
-    pre_helbit[1]=0ull;
-    pre_helbit[2]=0ull;
-
-
-	int nnw = 0;
-    for(int ii=0; ii<6; ii++){
-	  	nbits = 30;
-        if(ii==0) nbits = 23; 
-        for(int nnbit=0; nnbit<nbits; nnbit++)
-         {
-		   	ULong64_t tmpbit;
-			tmpbit = ( past_hel[ii]>>nnbit ) & 0x1;
-			tmpbit = InvertBit( tmpbit );
-            helbit[nnw] = (tmpbit << bit_num) | helbit[nnw];   // the bit 0 in vtp_past_hel[0] is the most recent helicity
-
-			tmpbit = ( pre_past_hel[ii]>>nnbit ) & 0x1;
-			tmpbit = InvertBit( tmpbit );
-            pre_helbit[nnw] = (tmpbit << bit_num) | pre_helbit[nnw];   // the bit 0 in vtp_past_hel[0] is the most recent helicity
-
-            bit_num ++;
-		    if( (bit_num%64) == 0 ){
-		     	nnw++;
-			    bit_num = 0;
-		    }
-         }
-    }
-
-	int nupdate = -1;
-	if( (helbit[0]==pre_helbit[0]) && (helbit[1]==pre_helbit[1]) && (helbit[2]==pre_helbit[2]) ) nupdate = 0;
-	if(nupdate == 0 ){   // there is no update of vtp_past_hel
-	  if(last_mps_time > pre_last_mps_time) return nupdate;     // last_mps_time should increase
-	  else{
-		printf("vtp_past_hel[6] are not updated but the current last_mps_time %d <= the previous one %d !!\n",last_mps_time,pre_last_mps_time);
-		return -1;
-	  }
+int HelicityUpdateWin(Int_t pre_hel_win_cnt, Int_t hel_win_cnt){
+// check if helicity window is updated or not
+    int nupdate=0;
+	nupdate = hel_win_cnt - pre_hel_win_cnt;
+	if(nupdate<0) {
+	  printf("The updated helicity window number is negative !!\n");
+	  nupdate=0;
 	}
 
-	ULong64_t bitMark = 0;
-    for(int ii=1; ii<3; ii++){
-	  	bitMark = ( 0x1 << (ii-1)) | bitMark;
-		ULong64_t tmphel0 = ( helbit[0]>>ii ) | ( (helbit[1] & bitMark) << (64-ii) );
-		ULong64_t tmphel1 = ( helbit[1]>>ii ) | ( (helbit[2] & bitMark) << (64-ii) );
-		ULong64_t tmphel2 = helbit[2]>>ii;
-		if( (tmphel0==pre_helbit[0]) && (tmphel1==pre_helbit[1]) && ((tmphel2 & pre_helbit[2]) == tmphel2) && (pre_helbit[2]!=0x1fffffffffff) ){
-			nupdate = ii;
-			break;
-		 }
-	}
-
-
-	if(nupdate > 20) printf("%d helicity windows are missing !! \n",nupdate);
 	return nupdate;
 }
 
-int GetHelicity(int *helpos){
-  	int tmp_helpos = *helpos;
+int GetHelicity(int helpos){
+  	int tmp_helpos = helpos;
 	if( tmp_helpos>3 ) return -1;          // helpos should be 0,1,2,3
 
 	int newbit = 0;
@@ -222,20 +165,12 @@ int GetHelicity(int *helpos){
 	if(startbit==1 )newbit = hel_pat1[tmp_helpos];
 	if(startbit==0 )newbit = hel_pat2[tmp_helpos];
 
-	if(tmp_helpos==3){
-	  ranBit(2,1);
-	  tmp_helpos = 0;
-	}
-	else tmp_helpos++;
-
-	*helpos = tmp_helpos;
-
 	return newbit;
 }
 
 int PredictHelicity(int nupdate, int *helpos){
 	
-    int newpos = nupdate + *helpos-1;
+    int newpos = nupdate + *helpos;
 	int nupdate_seed = newpos/4;
 	int new_helpos = newpos%4;
 
@@ -246,11 +181,7 @@ int PredictHelicity(int nupdate, int *helpos){
 	  for(int ii=0; ii<nupdate_seed; ii++) startbit=ranBit(2,1);
 	}
 	
-	if(new_helpos==0 ) {
-	  newbit = startbit;
-	  new_helpos++;
-	}
-	else newbit = GetHelicity( &new_helpos );
+	newbit = GetHelicity( new_helpos );
 
 	*helpos = new_helpos;
 

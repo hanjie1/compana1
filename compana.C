@@ -52,9 +52,8 @@ int main ()
   int ndatafile = 0;
   Int_t pre_helicity = 0;
   int helpos = 0;
-  Int_t pre_vtp_past_hel[7]={0};    // save the vtp_past_hel in the previous event  
-  Int_t pre_last_mps_time=0;         // save the last_mps_time in the previous event  
   Int_t pre_hel_win_cnt_1 = 0;
+  Int_t pre_hel_win_cnt = 0;
    
 
   cout<<"Which run? ";
@@ -418,37 +417,24 @@ int main ()
 			}
 			for(int mm=0;mm<6;mm++)
 			   vtp_past_hel[mm] = vtp_data.helicity[mm];
-	
 			vtp_helicity = InvertBit((vtp_past_hel[0] & 0x1));   // most recent helicity seen by VTP
-			int pred_bit = 0;   		      // predict bit in 8 windows
 			if(firstevent){
 			  findquad = FindQuad(vtp_past_hel, &helpos);   // find first quad, and initialize fgShreg and fgShreg_earlier, return helicity window position
-			  helpos = helpos + 1;    //vtp_past_hel is one window behind the in-time helicity
 			  if(findquad){
-				for(int mm=0; mm<delay_win/4-1; mm++)pred_bit=ranBit(2,1);      // fgShreg is update 8 windows
-				
-				if( helpos<4 ) current_helicity = GetHelicity(&helpos);   // get the helicity for the current window and update "helpos"
-				if( helpos==4 ){
-				  current_helicity = ranBit(2,1);
-				  helpos = 1;
-				}
-				if( helpos>4 ) printf("The helicity window position %d is bigger than 4 !!\n",helpos);
+				current_helicity = PredictHelicity(1, &helpos);	  //vtp_past_hel is one windown behind the in-time helicity
+				current_helicity = PredictHelicity(delay_win,&helpos);
 			  }
 			}
 
 			if(findquad && (firstevent == false)){
-			   int updateWin = HelicityUpdateWin(pre_vtp_past_hel, vtp_past_hel, pre_last_mps_time, last_mps_time);
+			   int updateWin = HelicityUpdateWin(pre_hel_win_cnt, hel_win_cnt);
 			   if(updateWin == 0) current_helicity = pre_helicity;         // helicity is not update
 			   else current_helicity = PredictHelicity(updateWin, &helpos);
 			   if(verbose) 
 				 printf("event %llu  Update %d helicity windows\n",nevents,updateWin); 
 			}
 			pre_helicity = current_helicity;
- 
-			for(int mm=0;mm<6;mm++)
-			   pre_vtp_past_hel[mm] = vtp_past_hel[mm];
-
-			pre_last_mps_time = last_mps_time;
+			pre_hel_win_cnt = hel_win_cnt;
 		  }
 
 		  /** scaler data **/

@@ -43,7 +43,7 @@ void CheckVTPHelicity()
   cout<<"Which run ?  ";
   cin>>runnumber;
 
-  TString filename = Form("Rootfiles/eDet_%d.root", runnumber);
+  TString filename = Form("../Rootfiles/eDet_%d.root", runnumber);
   TFile *f0 = new TFile(filename);
   if(! (f0->IsOpen()) ) return;
   TTree *T = (TTree*) f0->Get("T");
