@@ -88,3 +88,4 @@ Int_t vtp_helicity;				     // the most recent helicity in vtp_past_hel[0] bit 0
 /*****  VTPScal tree variables *****/
 Int_t vtp_BCM;						 // BCM from VTP scaler
 Int_t vtp_CavPower;				     // Cavity Power from VTP scaler
+Int_t cur_hel;				         // helicty after the delay is removed same as "current_helicity"

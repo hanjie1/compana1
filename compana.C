@@ -51,6 +51,7 @@ int main ()
   int vet_slotid[4]={EPLANEA_SLOT,EPLANEB_SLOT,EPLANEC_SLOT,EPLANED_SLOT};
   int ndatafile = 0;
   Int_t pre_helicity = 0;
+  Int_t last_win_helicity = 0;
   int helpos = 0;
   Int_t pre_hel_win_cnt_1 = 0;
   Int_t pre_hel_win_cnt = 0;
@@ -143,6 +144,7 @@ int main ()
   TTree *VTPScal = new TTree("VTPScal","vtp scaler tree for each helicity window");
   VTPScal->Branch("vtp_BCM",&vtp_BCM,"vtp_BCM/I");
   VTPScal->Branch("vtp_CavPower",&vtp_CavPower,"vtp_CavPower/I");
+  VTPScal->Branch("cur_hel", &cur_hel, "cur_hel/I"); 
 
 
   nevents=1;
@@ -424,14 +426,18 @@ int main ()
 				current_helicity = PredictHelicity(1, &helpos);	  //vtp_past_hel is one windown behind the in-time helicity
 				current_helicity = PredictHelicity(delay_win,&helpos);
 			  }
+			  last_win_helicity = current_helicity;
 			}
 
+			int updateWin=0;
 			if(findquad && (firstevent == false)){
-			   int updateWin = HelicityUpdateWin(pre_hel_win_cnt, hel_win_cnt);
+			   updateWin = HelicityUpdateWin(pre_hel_win_cnt, hel_win_cnt);
 			   if(updateWin == 0) current_helicity = pre_helicity;         // helicity is not update
 			   else current_helicity = PredictHelicity(updateWin, &helpos);
 			   if(verbose) 
 				 printf("event %llu  Update %d helicity windows\n",nevents,updateWin); 
+
+			   if((hel_win_cnt-pre_hel_win_cnt)>0) last_win_helicity = pre_helicity;
 			}
 			pre_helicity = current_helicity;
 			pre_hel_win_cnt = hel_win_cnt;
@@ -465,10 +471,12 @@ int main ()
 		    for(Int_t kk=pre_hel_win_cnt_1; kk<hel_win_cnt_1; kk++){
 			   vtp_BCM = 0;
 			   vtp_CavPower = 0;
+			   cur_hel = -1;
 			   VTPScal->Fill();
 		    }
 		    vtp_BCM = vtp_scaldat[15];
 		    vtp_CavPower = vtp_scaldat[12];
+			cur_hel = last_win_helicity;
 		    VTPScal->Fill();
 		    pre_hel_win_cnt_1 = hel_win_cnt_1+1;
 		  }
