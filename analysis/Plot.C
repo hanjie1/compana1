@@ -6,7 +6,7 @@ void Plot(){
 	for(int ii=36;ii<44;ii++) nstrip[ii-12]=ii;
 	for(int ii=49;ii<60;ii++) nstrip[ii-17]=ii;
 
-    ULong64_t totalQ_on=0, totalQ_off=0;
+    Double_t totalQ_on=0, totalQ_off=0;
 
 	TTree *TStrip = (TTree*) f->Get("TStrip");
 	TStrip->SetBranchAddress("totalQ_on",&totalQ_on);
@@ -34,7 +34,7 @@ void Plot(){
 	   double n1 = hDstrip_on[ii]->GetEntries();
 	   double n2 = hDstrip_off[ii]->GetEntries();
 	   hDstrip_off[ii]->Draw();
-	   hDstrip_off[ii]->GetXaxis()->SetRangeUser(0,20);
+	   hDstrip_off[ii]->GetXaxis()->SetRangeUser(0,400);
 	   hDstrip_off[ii]->SetTitle(Form("plane D chan %d; cnts(8.33ms);",nstrip[ii]));
 
 	   hDstrip_on[ii]->Draw("same");
@@ -65,7 +65,7 @@ void Plot(){
 	   double n1 = hDstrip_on[ii]->GetEntries();
 	   double n2 = hDstrip_off[ii]->GetEntries();
 	   hDstrip_off[ii]->Draw();
-	   hDstrip_off[ii]->GetXaxis()->SetRangeUser(0,20);
+	   hDstrip_off[ii]->GetXaxis()->SetRangeUser(0,400);
 	   hDstrip_off[ii]->SetTitle(Form("plane D chan %d; cnts(8.33ms);",nstrip[ii]));
 
 	   hDstrip_on[ii]->Draw("same");
@@ -95,7 +95,7 @@ void Plot(){
 	   double n1 = hDstrip_on[ii]->GetEntries();
 	   double n2 = hDstrip_off[ii]->GetEntries();
 	   hDstrip_off[ii]->Draw();
-	   hDstrip_off[ii]->GetXaxis()->SetRangeUser(0,20);
+	   hDstrip_off[ii]->GetXaxis()->SetRangeUser(0,400);
 	   hDstrip_off[ii]->SetTitle(Form("plane D chan %d; cnts(8.33ms);",nstrip[ii]));
 
 	   hDstrip_on[ii]->Draw("same");

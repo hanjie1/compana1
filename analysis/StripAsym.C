@@ -7,6 +7,7 @@ void StripAsym(){
 
      TFile *f0 = new TFile(filename);
      TTree *VTP = (TTree*) f0->Get("VTP");
+     TTree *T = (TTree*) f0->Get("T");
      TTree *VTPScal = (TTree*) f0->Get("VTPScal");
 
      Int_t nentries=0;
@@ -15,27 +16,32 @@ void StripAsym(){
      Int_t maxevent=0;
      cout<<"How many events ? (0 for total) ";
      cin>>maxevent;
-      
-     if(maxevent==0)maxevent=nentries-8;
+     
+     Double_t gain = 0.00033;
+     Double_t offset = -1.1678;
 
-     Int_t hel_win_cnt=0;
+     if(maxevent==0)maxevent=nentries;
+
+     Int_t hel_win_cnt_1=0,hel_win_cnt=0;
      Int_t vtpA_scal[128]={0},vtpB_scal[128]={0},vtpC_scal[128]={0},vtpD_scal[128]={0};
+	 Int_t scaldat[16]={0};
 
      VTP->SetBranchAddress("eplaneA_scalcnt",vtpA_scal);
      VTP->SetBranchAddress("eplaneB_scalcnt",vtpB_scal);
      VTP->SetBranchAddress("eplaneC_scalcnt",vtpC_scal);
      VTP->SetBranchAddress("eplaneD_scalcnt",vtpD_scal);
+     VTP->SetBranchAddress("scaldat",scaldat);
      VTP->SetBranchAddress("hel_win_cnt",&hel_win_cnt);
+     VTP->SetBranchAddress("hel_win_cnt_1",&hel_win_cnt_1);
 
      Int_t BCM,CavPower,cur_hel;
-     VTPScal->SetBranchAddress("vtp_BCM",&BCM);
-     VTPScal->SetBranchAddress("vtp_CavPower",&CavPower);
      VTPScal->SetBranchAddress("cur_hel",&cur_hel);
 
-     Int_t NplusA_on[8][128], NplusA_off[8][128], NminusA_on[8][128], NminusA_off[8][128];
-     Int_t NplusB_on[8][128], NplusB_off[8][128], NminusB_on[8][128], NminusB_off[8][128];
-     Int_t NplusC_on[8][128], NplusC_off[8][128], NminusC_on[8][128], NminusC_off[8][128];
-     Int_t NplusD_on[8][128], NplusD_off[8][128], NminusD_on[8][128], NminusD_off[8][128];
+     Double_t NplusA_on[8][128], NplusA_off[8][128], NminusA_on[8][128], NminusA_off[8][128];
+     Double_t NplusB_on[8][128], NplusB_off[8][128], NminusB_on[8][128], NminusB_off[8][128];
+     Double_t NplusC_on[8][128], NplusC_off[8][128], NminusC_on[8][128], NminusC_off[8][128];
+     Double_t NplusD_on[8][128], NplusD_off[8][128], NminusD_on[8][128], NminusD_off[8][128];
+     Double_t NQplus_on[8]={0}, NQminus_on[8]={0}, NQplus_off[8]={0}, NQminus_off[8]={0};
 
      for(int ii=0; ii<8; ii++){
 		for(int jj=0;jj<128;jj++){
@@ -46,20 +52,30 @@ void StripAsym(){
 		}
 	 }
 
-     Int_t noff=0;
+     Int_t hel_win_cnt_0=0;;
 	 for(int ii=0; ii<maxevent; ii++){
 		VTP->GetEntry(ii);
-		if(hel_win_cnt<576)	continue;
-		Int_t BCM0=0, CavPower0=0;
+	    if(ii==0) hel_win_cnt_0 = hel_win_cnt;
+		if( hel_win_cnt_1<(hel_win_cnt_0+8) )	continue;  // so it's able to check different delay helicity
+		if(scaldat[1]==0) continue;   // scaler is not update
+
+		Double_t BCM = scaldat[15];
+		Double_t CavPower = scaldat[12];
+	    Double_t charge = (BCM*gain/(1./120.)+offset)*(1./120.);    // charge for one helicity window
+
 		for(int jj=0; jj<8; jj++){
-		  VTPScal->GetEntry(hel_win_cnt-jj);
-		  if(jj==0){
-			BCM0 = BCM;
-			CavPower0 =CavPower;
+		  VTPScal->GetEntry(hel_win_cnt_1-jj);
+		  if(BCM>3500 && CavPower>100){
+			if(cur_hel==0) NQminus_on[jj]+= charge;
+			if(cur_hel==1) NQplus_on[jj]+= charge;
+		  }
+		  if(BCM>3500 && CavPower<40){
+			if(cur_hel==0) NQminus_off[jj]+= charge;
+			if(cur_hel==1) NQplus_off[jj] += charge;
 		  }
 
 		  for(int kk=0; kk<128; kk++){
-		    if(BCM0>3350 && CavPower0>115){
+		    if(BCM>3500 && CavPower>100){
 			 if(cur_hel==0){
 			   NminusA_on[jj][kk] += vtpA_scal[kk];
 			   NminusB_on[jj][kk] += vtpB_scal[kk];
@@ -73,7 +89,7 @@ void StripAsym(){
 			   NplusD_on[jj][kk] += vtpD_scal[kk];
 			 }
 		    }
-		    if(BCM0>3350 && CavPower0<=115){
+		    if(BCM>3500 && CavPower<40){
 			 if(cur_hel==0){
 			   NminusA_off[jj][kk] += vtpA_scal[kk];
 			   NminusB_off[jj][kk] += vtpB_scal[kk];
@@ -90,6 +106,9 @@ void StripAsym(){
 		  }
 		}
 	 }
+
+cout<<NQminus_on[0]<<"  "<<NQplus_on[0]<<endl;
+
 	 TGraph *gA_on[8];
 	 TGraph *gA_off[8];
 	 TGraph *gB_on[8];
@@ -105,8 +124,8 @@ void StripAsym(){
 		
 		for(int jj=0; jj<128; jj++){
 		  Double_t asym_on=0, asym_off=0;
-		  if((NplusA_on[ii][jj]+NminusA_on[ii][jj])!=0) asym_on = 1.0*(NplusA_on[ii][jj]-NminusA_on[ii][jj])/(1.0*NplusA_on[ii][jj]+1.0*NminusA_on[ii][jj]);
-		  if((NplusA_off[ii][jj]+NminusA_off[ii][jj])!=0) asym_off = 1.0*(NplusA_off[ii][jj]-NminusA_off[ii][jj])/(1.0*NplusA_off[ii][jj]+1.0*NminusA_off[ii][jj]);
+		  if((NplusA_on[ii][jj]+NminusA_on[ii][jj])!=0) asym_on = (NplusA_on[ii][jj]/NQplus_on[ii]-NminusA_on[ii][jj]/NQminus_on[ii])/(NplusA_on[ii][jj]/NQplus_on[ii]+NminusA_on[ii][jj]/NQminus_on[ii]);
+		  if((NplusA_off[ii][jj]+NminusA_off[ii][jj])!=0) asym_off = (NplusA_off[ii][jj]/NQplus_off[ii]-NminusA_off[ii][jj]/NQminus_off[ii])/(NplusA_off[ii][jj]/NQplus_off[ii]+NminusA_off[ii][jj]/NQminus_off[ii]);
 
 		  gA_on[ii]->SetPoint(jj,jj,asym_on);
 		  gA_off[ii]->SetPoint(jj,jj,asym_off);
@@ -119,8 +138,8 @@ void StripAsym(){
 		
 		for(int jj=0; jj<128; jj++){
 		  Double_t asym_on=0, asym_off=0;
-		  if((NplusB_on[ii][jj]+NminusB_on[ii][jj])!=0) asym_on = 1.0*(NplusB_on[ii][jj]-NminusB_on[ii][jj])/(1.0*NplusB_on[ii][jj]+1.0*NminusB_on[ii][jj]);
-		  if((NplusB_off[ii][jj]+NminusB_off[ii][jj])!=0) asym_off = 1.0*(NplusB_off[ii][jj]-NminusB_off[ii][jj])/(1.0*NplusB_off[ii][jj]+1.0*NminusB_off[ii][jj]);
+		  if((NplusB_on[ii][jj]+NminusB_on[ii][jj])!=0) asym_on = (NplusB_on[ii][jj]/NQplus_on[ii]-NminusB_on[ii][jj]/NQminus_on[ii])/(NplusB_on[ii][jj]/NQplus_on[ii]+NminusB_on[ii][jj]/NQminus_on[ii]);
+		  if((NplusB_off[ii][jj]+NminusB_off[ii][jj])!=0) asym_off = (NplusB_off[ii][jj]/NQplus_off[ii]-NminusB_off[ii][jj]/NQminus_off[ii])/(NplusB_off[ii][jj]/NQplus_off[ii]+NminusB_off[ii][jj]/NQminus_off[ii]);
 
 		  gB_on[ii]->SetPoint(jj,jj,asym_on);
 		  gB_off[ii]->SetPoint(jj,jj,asym_off);
@@ -133,8 +152,8 @@ void StripAsym(){
 		
 		for(int jj=0; jj<128; jj++){
 		  Double_t asym_on=0, asym_off=0;
-		  if((NplusC_on[ii][jj]+NminusC_on[ii][jj])!=0) asym_on = 1.0*(NplusC_on[ii][jj]-NminusC_on[ii][jj])/(1.0*NplusC_on[ii][jj]+1.0*NminusC_on[ii][jj]);
-		  if((NplusC_off[ii][jj]+NminusC_off[ii][jj])!=0) asym_off = 1.0*(NplusC_off[ii][jj]-NminusC_off[ii][jj])/(1.0*NplusC_off[ii][jj]+1.0*NminusC_off[ii][jj]);
+		  if((NplusC_on[ii][jj]+NminusC_on[ii][jj])!=0) asym_on = (NplusC_on[ii][jj]/NQplus_on[ii]-NminusC_on[ii][jj]/NQminus_on[ii])/(NplusC_on[ii][jj]/NQplus_on[ii]+NminusC_on[ii][jj]/NQminus_on[ii]);
+		  if((NplusC_off[ii][jj]+NminusC_off[ii][jj])!=0) asym_off = (NplusC_off[ii][jj]/NQplus_off[ii]-NminusC_off[ii][jj]/NQminus_off[ii])/(NplusC_off[ii][jj]/NQplus_off[ii]+NminusC_off[ii][jj]/NQminus_off[ii]);
 
 		  gC_on[ii]->SetPoint(jj,jj,asym_on);
 		  gC_off[ii]->SetPoint(jj,jj,asym_off);
@@ -147,8 +166,8 @@ void StripAsym(){
 		
 		for(int jj=0; jj<128; jj++){
 		  Double_t asym_on=0, asym_off=0;
-		  if((NplusD_on[ii][jj]+NminusD_on[ii][jj])!=0) asym_on = 1.0*(NplusD_on[ii][jj]-NminusD_on[ii][jj])/(1.0*NplusD_on[ii][jj]+1.0*NminusD_on[ii][jj]);
-		  if((NplusD_off[ii][jj]+NminusD_off[ii][jj])!=0) asym_off = 1.0*(NplusD_off[ii][jj]-NminusD_off[ii][jj])/(1.0*NplusD_off[ii][jj]+1.0*NminusD_off[ii][jj]);
+		  if((NplusD_on[ii][jj]+NminusD_on[ii][jj])!=0) asym_on = (NplusD_on[ii][jj]/NQplus_on[ii]-NminusD_on[ii][jj]/NQminus_on[ii])/(NplusD_on[ii][jj]/NQplus_on[ii]+NminusD_on[ii][jj]/NQminus_on[ii]);
+		  if((NplusD_off[ii][jj]+NminusD_off[ii][jj])!=0) asym_off = (NplusD_off[ii][jj]/NQplus_off[ii]-NminusD_off[ii][jj]/NQminus_off[ii])/(NplusD_off[ii][jj]/NQplus_off[ii]+NminusD_off[ii][jj]/NQminus_off[ii]);
 
 		  gD_on[ii]->SetPoint(jj,jj,asym_on);
 		  gD_off[ii]->SetPoint(jj,jj,asym_off);
@@ -373,11 +392,11 @@ void StripAsym(){
 	 leg12->AddEntry(gA_off[7],"laser off","P");
 	 leg12->Draw(); 
 
-
-     c1->Print("Asymmetry.pdf[");
-     c1->Print("Asymmetry.pdf");
-     c5->Print("Asymmetry.pdf");
-     c5->Print("Asymmetry.pdf]");
-
+/*
+     c1->Print(Form("Asymmetry_%d.pdf[",runnumber));
+     c1->Print(Form("Asymmetry_%d.pdf",runnumber));
+     c5->Print(Form("Asymmetry_%d.pdf",runnumber));
+     c5->Print(Form("Asymmetry_%d.pdf]",runnumber));
+*/
 }
 

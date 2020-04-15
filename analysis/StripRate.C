@@ -4,21 +4,24 @@ void StripRate()
 {
      int runnumber=0;
      cout<<"Which run ?  ";
-     cin>>runnumber;
+	 cin>>runnumber;
+
+     Double_t gain = 0.00033;
+	 Double_t offset = -1.1678;
 
      TString filename = Form("/home/compton/hanjie/compana1/Rootfiles/eDet_%d.root", runnumber); 
 
      TFile *f0 = new TFile(filename);
      TTree *VTP = (TTree*) f0->Get("VTP");
-     TTree *T = (TTree*) f0->Get("T");
-     TTree *VTPScal = (TTree*) f0->Get("VTPScal");
 
-	 VTP->AddFriend("T");
+     int nstrip[43];
+     for(int ii=0;ii<12;ii++) nstrip[ii]=ii;
+     for(int ii=16;ii<28;ii++) nstrip[ii-4]=ii;
+     for(int ii=36;ii<44;ii++) nstrip[ii-12]=ii;
+     for(int ii=49;ii<60;ii++) nstrip[ii-17]=ii;
 
-	 TFile *outroot = new TFile("striprate.root","RECREATE");
-
-	 Int_t hel_win_cnt=0;
      Int_t vtpA_scal[128]={0},vtpB_scal[128]={0},vtpC_scal[128]={0},vtpD_scal[128]={0};
+	 Int_t vtp_scaldat[16]={0};
 	 Int_t current_hel=0;
 
      Int_t nentries=0;
@@ -30,172 +33,908 @@ void StripRate()
 
 	 if(maxevent==0)maxevent=nentries;
 
-	 TH2F *hA = new TH2F("hA","plane A strip rate",128,0,128,500,0,500);
-	 TH2F *hA_off = new TH2F("hA_off","plane A strip rate beam off",128,0,128,500,0,500);
-	 TH2F *hA_laseroff = new TH2F("hA_laseroff","plane A strip rate laser off",128,0,128,500,0,500);
-	 TH2F *hA_laseron = new TH2F("hA_laseron","plane A strip rate laser on",128,0,128,500,0,500);
-
-	 TH2F *hB = new TH2F("hB","plane B strip rate",128,0,128,500,0,500);
-	 TH2F *hB_off = new TH2F("hB_off","plane B strip rate beam off",128,0,128,500,0,500);
-	 TH2F *hB_laseroff = new TH2F("hB_laseroff","plane B strip rate laser off",128,0,128,500,0,500);
-	 TH2F *hB_laseron = new TH2F("hB_laseron","plane B strip rate laser on",128,0,128,500,0,500);
-
-	 TH2F *hC = new TH2F("hC","plane C strip rate",128,0,128,500,0,500);
-	 TH2F *hC_off = new TH2F("hC_off","plane C strip rate beam off",128,0,128,500,0,500);
-	 TH2F *hC_laseroff = new TH2F("hC_laseroff","plane C strip rate laser off",128,0,128,500,0,500);
-	 TH2F *hC_laseron = new TH2F("hC_laseron","plane C strip rate laser on",128,0,128,500,0,500);
-
-	 TH2F *hD = new TH2F("hD","plane D strip rate",128,0,128,500,0,500);
-	 TH2F *hD_off = new TH2F("hD_off","plane D strip rate beam off",128,0,128,500,0,500);
-	 TH2F *hD_laseroff = new TH2F("hD_laseroff","plane D strip rate laser off",128,0,128,500,0,500);
-	 TH2F *hD_laseron = new TH2F("hD_laseron","plane D strip rate laser on",128,0,128,500,0,500);
-
      VTP->SetBranchAddress("eplaneA_scalcnt",vtpA_scal);
      VTP->SetBranchAddress("eplaneB_scalcnt",vtpB_scal);
      VTP->SetBranchAddress("eplaneC_scalcnt",vtpC_scal);
      VTP->SetBranchAddress("eplaneD_scalcnt",vtpD_scal);
-     VTP->SetBranchAddress("hel_win_cnt",&hel_win_cnt);
-     VTP->SetBranchAddress("current_helicity",&current_hel);
+     VTP->SetBranchAddress("scaldat",vtp_scaldat);
 
-	 Int_t BCM,CavPower;
-	 VTPScal->SetBranchAddress("vtp_BCM",&BCM);
-	 VTPScal->SetBranchAddress("vtp_CavPower",&CavPower);
+	 TH1F *hA_laseroff[43];
+	 TH1F *hA_laseron[43];
+	 TH1F *hB_laseroff[43];
+	 TH1F *hB_laseron[43];
+	 TH1F *hC_laseroff[43];
+	 TH1F *hC_laseron[43];
+	 TH1F *hD_laseroff[43];
+	 TH1F *hD_laseron[43];
 
-	 ULong64_t totalQ_off = 0;
-	 ULong64_t totalQ_on = 0;
-	 Double_t Asym_A_on[128]={0.0},Asym_B_on[128]={0.0},Asym_C_on[128]={0.0},Asym_D_on[128]={0.0};
-	 Double_t Asym_A_off[128]={0.0},Asym_B_off[128]={0.0},Asym_C_off[128]={0.0},Asym_D_off[128]={0.0};
+     for(int ii=0;ii<43;ii++){
+	    int strip_num = nstrip[ii];
+		hA_laseroff[ii] = new TH1F(Form("hA_laseroff_%d",strip_num),Form("plane A chan %d strip rate (laser off)",strip_num),20,0,20);
+		hA_laseron[ii] = new TH1F(Form("hA_laseron_%d",strip_num),Form("plane A chan %d strip rate (laser on)",strip_num),20,0,20);
+		hB_laseroff[ii] = new TH1F(Form("hB_laseroff_%d",strip_num),Form("plane A chan %d strip rate (laser off)",strip_num),40,0,40);
+		hB_laseron[ii] = new TH1F(Form("hB_laseron_%d",strip_num),Form("plane A chan %d strip rate (laser on)",strip_num),40,0,40);
+		hC_laseroff[ii] = new TH1F(Form("hC_laseroff_%d",strip_num),Form("plane A chan %d strip rate (laser off)",strip_num),150,0,150);
+		hC_laseron[ii] = new TH1F(Form("hC_laseron_%d",strip_num),Form("plane A chan %d strip rate (laser on)",strip_num),150,0,150);
+		hD_laseroff[ii] = new TH1F(Form("hD_laseroff_%d",strip_num),Form("plane A chan %d strip rate (laser off)",strip_num),400,0,400);
+		hD_laseron[ii] = new TH1F(Form("hD_laseron_%d",strip_num),Form("plane A chan %d strip rate (laser on)",strip_num),400,0,400);
+	 }
 
-     TTree *TStrip = new TTree("TStrip","save some run infomation");
-	 TStrip->Branch("totalQ_on",&totalQ_on,"totalQ_on/l");
-	 TStrip->Branch("totalQ_off",&totalQ_off,"totalQ_off/l");
-	 TStrip->Branch("asym_A_on",Asym_A_on,"Asym_A_on[128]/D");
-	 TStrip->Branch("asym_B_on",Asym_B_on,"Asym_B_on[128]/D");
-	 TStrip->Branch("asym_C_on",Asym_C_on,"Asym_C_on[128]/D");
-	 TStrip->Branch("asym_D_on",Asym_D_on,"Asym_D_on[128]/D");
-	 TStrip->Branch("asym_A_off",Asym_A_off,"Asym_A_off[128]/D");
-	 TStrip->Branch("asym_B_off",Asym_B_off,"Asym_B_off[128]/D");
-	 TStrip->Branch("asym_C_off",Asym_C_off,"Asym_C_off[128]/D");
-	 TStrip->Branch("asym_D_off",Asym_D_off,"Asym_D_off[128]/D");
-
-	 Int_t NplusA_on[128]={0}, NplusA_off[128]={0}, NminusA_on[128]={0}, NminusA_off[128]={0};
-	 Int_t NplusB_on[128]={0}, NplusB_off[128]={0}, NminusB_on[128]={0}, NminusB_off[128]={0};
-	 Int_t NplusC_on[128]={0}, NplusC_off[128]={0}, NminusC_on[128]={0}, NminusC_off[128]={0};
-	 Int_t NplusD_on[128]={0}, NplusD_off[128]={0}, NminusD_on[128]={0}, NminusD_off[128]={0};
-	 int maxhit=0;
+	 Double_t maxhit_A=0,maxhit_B=0,maxhit_C=0,maxhit_D=0;
+     Int_t pre_hel_win_cnt=0;
+	 bool update=false;   // mark if the vtp scaler is read out;
      for(int nn=0;nn<maxevent;nn++){
 	   VTP->GetEntry(nn);
-       VTPScal->GetEntry(hel_win_cnt);
+	   if(vtp_scaldat[1]==0) continue;  // clock is 0; the scaler is not read out
 
-	   for(int jj=0;jj<128;jj++){
-		if(vtpA_scal[jj]>0){
-	     hA->Fill(jj,vtpA_scal[jj]);	
-		 if(vtpA_scal[jj]>maxhit) maxhit = vtpA_scal[jj];
-		}
-		if(vtpB_scal[jj]>0){
-	     hB->Fill(jj,vtpB_scal[jj]);	
-		 if(vtpB_scal[jj]>maxhit) maxhit = vtpB_scal[jj];
-		}
-		if(vtpC_scal[jj]>0){
-	   	 hC->Fill(jj,vtpC_scal[jj]);	
-		 if(vtpC_scal[jj]>maxhit) maxhit = vtpC_scal[jj];
-		}
-		if(vtpD_scal[jj]>0){
-	     hD->Fill(jj,vtpD_scal[jj]);	
-		 if(vtpD_scal[jj]>maxhit) maxhit = vtpD_scal[jj];
-		}
-		if(BCM>3350 && CavPower<=115){
-		   if(vtpA_scal[jj]>0){ 
-			 hA_laseroff->Fill(jj,vtpA_scal[jj]);
-			 if(current_hel==0) NminusA_off[jj] += vtpA_scal[jj];
-			 if(current_hel==1) NplusA_off[jj] += vtpA_scal[jj];
-		   }
-		   if(vtpB_scal[jj]>0){ 
-			 hB_laseroff->Fill(jj,vtpB_scal[jj]);
-			 if(current_hel==0) NminusB_off[jj] += vtpB_scal[jj];
-			 if(current_hel==1) NplusB_off[jj] += vtpB_scal[jj];
-		   }
-		   if(vtpC_scal[jj]>0){ 
-			 hC_laseroff->Fill(jj,vtpC_scal[jj]);
-			 if(current_hel==0) NminusC_off[jj] += vtpC_scal[jj];
-			 if(current_hel==1) NplusC_off[jj] += vtpC_scal[jj];
-		   }
-		   if(vtpD_scal[jj]>0){ 
-			 hD_laseroff->Fill(jj,vtpD_scal[jj]);
-			 if(current_hel==0) NminusD_off[jj] += vtpD_scal[jj];
-			 if(current_hel==1) NplusD_off[jj] += vtpD_scal[jj];
-		   }
+	   Double_t BCM = vtp_scaldat[15];
+	   Double_t CavPower = vtp_scaldat[12];   
+	   Double_t helQ = (BCM*gain/(1./120.)+offset)*(1./120.);
+	   for(int jj=0;jj<43;jj++){
+	    int strip_num=nstrip[jj]; 
+
+		if(BCM>3350 && CavPower<40){    // beam on, laser off
+	 	  if(vtpA_scal[strip_num]>0) hA_laseroff[jj]->Fill(vtpA_scal[strip_num]*1.0/helQ);
+	 	  if(vtpB_scal[strip_num]>0) hB_laseroff[jj]->Fill(vtpB_scal[strip_num]*1.0/helQ);
+	 	  if(vtpC_scal[strip_num]>0) hC_laseroff[jj]->Fill(vtpC_scal[strip_num]*1.0/helQ);
+	 	  if(vtpD_scal[strip_num]>0) hD_laseroff[jj]->Fill(vtpD_scal[strip_num]*1.0/helQ);
 		 }
-		if(BCM>3350 && CavPower>115){
-		   if(vtpA_scal[jj]>0){ 
-			 hA_laseron->Fill(jj,vtpA_scal[jj]);
-			 if(current_hel==0) NminusA_on[jj] += vtpA_scal[jj];
-			 if(current_hel==1) NplusA_on[jj] += vtpA_scal[jj];
-		   }
-		   if(vtpB_scal[jj]>0){ 
-			 hB_laseron->Fill(jj,vtpB_scal[jj]);
-			 if(current_hel==0) NminusB_on[jj] += vtpB_scal[jj];
-			 if(current_hel==1) NplusB_on[jj] += vtpB_scal[jj];
-		   }
-		   if(vtpC_scal[jj]>0){ 
-			 hC_laseron->Fill(jj,vtpC_scal[jj]);
-			 if(current_hel==0) NminusC_on[jj] += vtpC_scal[jj];
-			 if(current_hel==1) NplusC_on[jj] += vtpC_scal[jj];
-		   }
-		   if(vtpD_scal[jj]>0){ 
-			 hD_laseron->Fill(jj,vtpD_scal[jj]);
-			 if(current_hel==0) NminusD_on[jj] += vtpD_scal[jj];
-			 if(current_hel==1) NplusD_on[jj] += vtpD_scal[jj];
-		   }
-		 }
-		if(BCM==0 && CavPower==0){
-		   if(vtpA_scal[jj]>0) hA_off->Fill(jj,vtpA_scal[jj]);
-		   if(vtpB_scal[jj]>0) hB_off->Fill(jj,vtpB_scal[jj]);
-		   if(vtpC_scal[jj]>0) hC_off->Fill(jj,vtpC_scal[jj]);
-		   if(vtpD_scal[jj]>0) hD_off->Fill(jj,vtpD_scal[jj]);
+
+		if(BCM>3350 && CavPower>100){
+	 	  if(vtpA_scal[strip_num]>0) hA_laseron[jj]->Fill(vtpA_scal[strip_num]*1.0/helQ);
+	 	  if(vtpB_scal[strip_num]>0) hB_laseron[jj]->Fill(vtpB_scal[strip_num]*1.0/helQ);
+	 	  if(vtpC_scal[strip_num]>0) hC_laseron[jj]->Fill(vtpC_scal[strip_num]*1.0/helQ);
+	 	  if(vtpD_scal[strip_num]>0) hD_laseron[jj]->Fill(vtpD_scal[strip_num]*1.0/helQ);
+
+		  if(vtpA_scal[strip_num]*1.0/helQ > maxhit_A) maxhit_A=vtpA_scal[strip_num]*1.0/helQ;
+		  if(vtpB_scal[strip_num]*1.0/helQ > maxhit_B) maxhit_B=vtpB_scal[strip_num]*1.0/helQ;
+		  if(vtpC_scal[strip_num]*1.0/helQ > maxhit_C) maxhit_C=vtpB_scal[strip_num]*1.0/helQ;
+		  if(vtpD_scal[strip_num]*1.0/helQ > maxhit_D) maxhit_D=vtpD_scal[strip_num]*1.0/helQ;
 		 }
  	   }
-
-	   if(BCM>3350 && CavPower<=115) totalQ_off += BCM;
-	   if(BCM>3350 && CavPower>115) totalQ_on += BCM;
-	   //cout<<totalQ_on<<" "<<totalQ_off<<endl;
 	 }	
 	 delete VTP;
 
-	 for(int ii=0;ii<128;ii++){
-		if((NplusA_on[ii]+NminusA_on[ii])!=0) Asym_A_on[ii] = 1.0*(NplusA_on[ii]-NminusA_on[ii])/(NplusA_on[ii]*1.0+NminusA_on[ii]*1.0);	
-		if((NplusB_on[ii]+NminusB_on[ii])!=0) Asym_B_on[ii] = 1.0*(NplusB_on[ii]-NminusB_on[ii])/(NplusB_on[ii]*1.0+NminusB_on[ii]*1.0);	
-		if((NplusC_on[ii]+NminusC_on[ii])!=0) Asym_C_on[ii] = 1.0*(NplusC_on[ii]-NminusC_on[ii])/(NplusC_on[ii]*1.0+NminusC_on[ii]*1.0);	
-		if((NplusD_on[ii]+NminusD_on[ii])!=0) Asym_D_on[ii] = 1.0*(NplusD_on[ii]-NminusD_on[ii])/(NplusD_on[ii]*1.0+NminusD_on[ii]*1.0);	
+     cout<<"maxhit A:   "<<maxhit_A<<endl;
+     cout<<"maxhit B:   "<<maxhit_B<<endl;
+     cout<<"maxhit C:   "<<maxhit_C<<endl;
+     cout<<"maxhit D:   "<<maxhit_D<<endl;
+/*
+    TCanvas *cA1=new TCanvas("cA1","cA1",1500,1500);
+    cA1->Divide(2,4);
+    for(int ii=0;ii<8;ii++){
+       cA1->cd(ii+1);
+       Double_t n1 = hA_laseron[ii]->GetEntries();
+       Double_t n2 = hA_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hA_laseron[ii]->GetMean();
+	   Double_t mean_off = hA_laseroff[ii]->GetMean();
+       hA_laseron[ii]->Draw();
+       //hA_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hA_laseron[ii]->SetTitle(Form("plane A chan %d; cnts/Q;",nstrip[ii]));
 
-		if((NplusA_off[ii]+NminusA_off[ii])!=0) Asym_A_off[ii] = 1.0*(NplusA_off[ii]-NminusA_off[ii])/(NplusA_off[ii]*1.0+NminusA_off[ii]*1.0);	
-		if((NplusB_off[ii]+NminusB_off[ii])!=0) Asym_B_off[ii] = 1.0*(NplusB_off[ii]-NminusB_off[ii])/(NplusB_off[ii]*1.0+NminusB_off[ii]*1.0);	
-		if((NplusC_off[ii]+NminusC_off[ii])!=0) Asym_C_off[ii] = 1.0*(NplusC_off[ii]-NminusC_off[ii])/(NplusC_off[ii]*1.0+NminusC_off[ii]*1.0);	
-		if((NplusD_off[ii]+NminusD_off[ii])!=0) Asym_D_off[ii] = 1.0*(NplusD_off[ii]-NminusD_off[ii])/(NplusD_off[ii]*1.0+NminusD_off[ii]*1.0);	
-	 }
+       hA_laseroff[ii]->Draw("same");
+       hA_laseroff[ii]->Scale(n1/n2);
+       hA_laseroff[ii]->SetLineColor(2); 
+       hA_laseroff[ii]->SetLineWidth(2);
+       hA_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hA_laseron[ii],"laser on","L");
+       leg->AddEntry(hA_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
 
 
-	 TStrip->Fill();
-     cout<<"maxhit:   "<<maxhit<<endl;
-	 hA->Draw();
-	 hA_off->Draw();
-	 hA_laseroff->Draw();
-	 hA_laseron->Draw();
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
 
-	 hB->Draw();
-	 hB_off->Draw();
-	 hB_laseroff->Draw();
-	 hB_laseron->Draw();
+    TCanvas *cA2=new TCanvas("cA2","cA2",1500,1500);
+    cA2->Divide(2,4);
+    for(int ii=8;ii<16;ii++){
+       cA2->cd(ii-7);
+       Double_t n1 = hA_laseron[ii]->GetEntries();
+       Double_t n2 = hA_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hA_laseron[ii]->GetMean();
+	   Double_t mean_off = hA_laseroff[ii]->GetMean();
+       hA_laseron[ii]->Draw();
+       //hA_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hA_laseron[ii]->SetTitle(Form("plane A chan %d; cnts/Q;",nstrip[ii]));
 
-	 hC->Draw();
-	 hC_off->Draw();
-	 hC_laseroff->Draw();
-	 hC_laseron->Draw();
-	 
-	 hD->Draw();
-	 hD_off->Draw();
-	 hD_laseroff->Draw();
-	 hD_laseron->Draw();
+       hA_laseroff[ii]->Draw("same");
+       hA_laseroff[ii]->Scale(n1/n2);
+       hA_laseroff[ii]->SetLineColor(2); 
+       hA_laseroff[ii]->SetLineWidth(2);
+       hA_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hA_laseron[ii],"laser on","L");
+       leg->AddEntry(hA_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
 
-	 outroot->Write();
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cA3=new TCanvas("cA3","cA3",1500,1500);
+    cA3->Divide(2,4);
+    for(int ii=16;ii<24;ii++){
+       cA3->cd(ii-15);
+       Double_t n1 = hA_laseron[ii]->GetEntries();
+       Double_t n2 = hA_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hA_laseron[ii]->GetMean();
+	   Double_t mean_off = hA_laseroff[ii]->GetMean();
+       hA_laseron[ii]->Draw();
+       //hA_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hA_laseron[ii]->SetTitle(Form("plane A chan %d; cnts/Q;",nstrip[ii]));
+
+       hA_laseroff[ii]->Draw("same");
+       hA_laseroff[ii]->Scale(n1/n2);
+       hA_laseroff[ii]->SetLineColor(2); 
+       hA_laseroff[ii]->SetLineWidth(2);
+       hA_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hA_laseron[ii],"laser on","L");
+       leg->AddEntry(hA_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cA4=new TCanvas("cA4","cA4",1500,1500);
+    cA4->Divide(2,4);
+    for(int ii=24;ii<32;ii++){
+       cA4->cd(ii-23);
+       Double_t n1 = hA_laseron[ii]->GetEntries();
+       Double_t n2 = hA_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hA_laseron[ii]->GetMean();
+	   Double_t mean_off = hA_laseroff[ii]->GetMean();
+       hA_laseron[ii]->Draw();
+       //hA_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hA_laseron[ii]->SetTitle(Form("plane A chan %d; cnts/Q;",nstrip[ii]));
+
+       hA_laseroff[ii]->Draw("same");
+       hA_laseroff[ii]->Scale(n1/n2);
+       hA_laseroff[ii]->SetLineColor(2); 
+       hA_laseroff[ii]->SetLineWidth(2);
+       hA_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hA_laseron[ii],"laser on","L");
+       leg->AddEntry(hA_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cA5=new TCanvas("cA5","cA5",1500,1500);
+    cA5->Divide(2,4);
+    for(int ii=32;ii<40;ii++){
+       cA5->cd(ii-31);
+       Double_t n1 = hA_laseron[ii]->GetEntries();
+       Double_t n2 = hA_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hA_laseron[ii]->GetMean();
+	   Double_t mean_off = hA_laseroff[ii]->GetMean();
+       hA_laseron[ii]->Draw();
+       //hA_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hA_laseron[ii]->SetTitle(Form("plane A chan %d; cnts/Q;",nstrip[ii]));
+
+       hA_laseroff[ii]->Draw("same");
+       hA_laseroff[ii]->Scale(n1/n2);
+       hA_laseroff[ii]->SetLineColor(2); 
+       hA_laseroff[ii]->SetLineWidth(2);
+       hA_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hA_laseron[ii],"laser on","L");
+       leg->AddEntry(hA_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cA6=new TCanvas("cA6","cA6",1500,1500);
+    cA6->Divide(2,4);
+    for(int ii=40;ii<43;ii++){
+       cA6->cd(ii-39);
+       Double_t n1 = hA_laseron[ii]->GetEntries();
+       Double_t n2 = hA_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hA_laseron[ii]->GetMean();
+	   Double_t mean_off = hA_laseroff[ii]->GetMean();
+       hA_laseron[ii]->Draw();
+       //hA_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hA_laseron[ii]->SetTitle(Form("plane A chan %d; cnts/Q;",nstrip[ii]));
+
+       hA_laseroff[ii]->Draw("same");
+       hA_laseroff[ii]->Scale(n1/n2);
+       hA_laseroff[ii]->SetLineColor(2); 
+       hA_laseroff[ii]->SetLineWidth(2);
+       hA_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hA_laseron[ii],"laser on","L");
+       leg->AddEntry(hA_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+   cA1->Print("A_striprate.pdf[");
+   cA1->Print("A_striprate.pdf");
+   cA2->Print("A_striprate.pdf");
+   cA3->Print("A_striprate.pdf");
+   cA4->Print("A_striprate.pdf");
+   cA5->Print("A_striprate.pdf");
+   cA6->Print("A_striprate.pdf");
+   cA6->Print("A_striprate.pdf]");
+
+
+    TCanvas *cB1=new TCanvas("cB1","cB1",1500,1500);
+    cB1->Divide(2,4);
+    for(int ii=0;ii<8;ii++){
+       cB1->cd(ii+1);
+       Double_t n1 = hB_laseron[ii]->GetEntries();
+       Double_t n2 = hB_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hB_laseron[ii]->GetMean();
+	   Double_t mean_off = hB_laseroff[ii]->GetMean();
+       hB_laseron[ii]->Draw();
+       //hB_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hB_laseron[ii]->SetTitle(Form("plane B chan %d; cnts/Q;",nstrip[ii]));
+
+       hB_laseroff[ii]->Draw("same");
+       hB_laseroff[ii]->Scale(n1/n2);
+       hB_laseroff[ii]->SetLineColor(2); 
+       hB_laseroff[ii]->SetLineWidth(2);
+       hB_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hB_laseron[ii],"laser on","L");
+       leg->AddEntry(hB_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cB2=new TCanvas("cB2","cB2",1500,1500);
+    cB2->Divide(2,4);
+    for(int ii=8;ii<16;ii++){
+       cB2->cd(ii-7);
+       Double_t n1 = hB_laseron[ii]->GetEntries();
+       Double_t n2 = hB_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hB_laseron[ii]->GetMean();
+	   Double_t mean_off = hB_laseroff[ii]->GetMean();
+       hB_laseron[ii]->Draw();
+       //hB_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hB_laseron[ii]->SetTitle(Form("plane B chan %d; cnts/Q;",nstrip[ii]));
+
+       hB_laseroff[ii]->Draw("same");
+       hB_laseroff[ii]->Scale(n1/n2);
+       hB_laseroff[ii]->SetLineColor(2); 
+       hB_laseroff[ii]->SetLineWidth(2);
+       hB_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hB_laseron[ii],"laser on","L");
+       leg->AddEntry(hB_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cB3=new TCanvas("cB3","cB3",1500,1500);
+    cB3->Divide(2,4);
+    for(int ii=16;ii<24;ii++){
+       cB3->cd(ii-15);
+       Double_t n1 = hB_laseron[ii]->GetEntries();
+       Double_t n2 = hB_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hB_laseron[ii]->GetMean();
+	   Double_t mean_off = hB_laseroff[ii]->GetMean();
+       hB_laseron[ii]->Draw();
+       //hB_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hB_laseron[ii]->SetTitle(Form("plane B chan %d; cnts/Q;",nstrip[ii]));
+
+       hB_laseroff[ii]->Draw("same");
+       hB_laseroff[ii]->Scale(n1/n2);
+       hB_laseroff[ii]->SetLineColor(2); 
+       hB_laseroff[ii]->SetLineWidth(2);
+       hB_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hB_laseron[ii],"laser on","L");
+       leg->AddEntry(hB_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cB4=new TCanvas("cB4","cB4",1500,1500);
+    cB4->Divide(2,4);
+    for(int ii=24;ii<32;ii++){
+       cB4->cd(ii-23);
+       Double_t n1 = hB_laseron[ii]->GetEntries();
+       Double_t n2 = hB_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hB_laseron[ii]->GetMean();
+	   Double_t mean_off = hB_laseroff[ii]->GetMean();
+       hB_laseron[ii]->Draw();
+       //hB_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hB_laseron[ii]->SetTitle(Form("plane B chan %d; cnts/Q;",nstrip[ii]));
+
+       hB_laseroff[ii]->Draw("same");
+       hB_laseroff[ii]->Scale(n1/n2);
+       hB_laseroff[ii]->SetLineColor(2); 
+       hB_laseroff[ii]->SetLineWidth(2);
+       hB_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hB_laseron[ii],"laser on","L");
+       leg->AddEntry(hB_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cB5=new TCanvas("cB5","cB5",1500,1500);
+    cB5->Divide(2,4);
+    for(int ii=32;ii<40;ii++){
+       cB5->cd(ii-31);
+       Double_t n1 = hB_laseron[ii]->GetEntries();
+       Double_t n2 = hB_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hB_laseron[ii]->GetMean();
+	   Double_t mean_off = hB_laseroff[ii]->GetMean();
+       hB_laseron[ii]->Draw();
+       //hB_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hB_laseron[ii]->SetTitle(Form("plane B chan %d; cnts/Q;",nstrip[ii]));
+
+       hB_laseroff[ii]->Draw("same");
+       hB_laseroff[ii]->Scale(n1/n2);
+       hB_laseroff[ii]->SetLineColor(2); 
+       hB_laseroff[ii]->SetLineWidth(2);
+       hB_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hB_laseron[ii],"laser on","L");
+       leg->AddEntry(hB_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cB6=new TCanvas("cB6","cB6",1500,1500);
+    cB6->Divide(2,4);
+    for(int ii=40;ii<43;ii++){
+       cB6->cd(ii-39);
+       Double_t n1 = hB_laseron[ii]->GetEntries();
+       Double_t n2 = hB_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hB_laseron[ii]->GetMean();
+	   Double_t mean_off = hB_laseroff[ii]->GetMean();
+       hB_laseron[ii]->Draw();
+       //hB_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hB_laseron[ii]->SetTitle(Form("plane B chan %d; cnts/Q;",nstrip[ii]));
+
+       hB_laseroff[ii]->Draw("same");
+       hB_laseroff[ii]->Scale(n1/n2);
+       hB_laseroff[ii]->SetLineColor(2); 
+       hB_laseroff[ii]->SetLineWidth(2);
+       hB_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hB_laseron[ii],"laser on","L");
+       leg->AddEntry(hB_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+   cB1->Print("B_striprate.pdf[");
+   cB1->Print("B_striprate.pdf");
+   cB2->Print("B_striprate.pdf");
+   cB3->Print("B_striprate.pdf");
+   cB4->Print("B_striprate.pdf");
+   cB5->Print("B_striprate.pdf");
+   cB6->Print("B_striprate.pdf");
+   cB6->Print("B_striprate.pdf]");
+
+
+    TCanvas *cC1=new TCanvas("cC1","cC1",1500,1500);
+    cC1->Divide(2,4);
+    for(int ii=0;ii<8;ii++){
+       cC1->cd(ii+1);
+       Double_t n1 = hC_laseron[ii]->GetEntries();
+       Double_t n2 = hC_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hC_laseron[ii]->GetMean();
+	   Double_t mean_off = hC_laseroff[ii]->GetMean();
+       hC_laseron[ii]->Draw();
+       //hC_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hC_laseron[ii]->SetTitle(Form("plane C chan %d; cnts/Q;",nstrip[ii]));
+
+       hC_laseroff[ii]->Draw("same");
+       hC_laseroff[ii]->Scale(n1/n2);
+       hC_laseroff[ii]->SetLineColor(2); 
+       hC_laseroff[ii]->SetLineWidth(2);
+       hC_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hC_laseron[ii],"laser on","L");
+       leg->AddEntry(hC_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cC2=new TCanvas("cC2","cC2",1500,1500);
+    cC2->Divide(2,4);
+    for(int ii=8;ii<16;ii++){
+       cC2->cd(ii-7);
+       Double_t n1 = hC_laseron[ii]->GetEntries();
+       Double_t n2 = hC_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hC_laseron[ii]->GetMean();
+	   Double_t mean_off = hC_laseroff[ii]->GetMean();
+       hC_laseron[ii]->Draw();
+       //hC_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hC_laseron[ii]->SetTitle(Form("plane C chan %d; cnts/Q;",nstrip[ii]));
+
+       hC_laseroff[ii]->Draw("same");
+       hC_laseroff[ii]->Scale(n1/n2);
+       hC_laseroff[ii]->SetLineColor(2); 
+       hC_laseroff[ii]->SetLineWidth(2);
+       hC_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hC_laseron[ii],"laser on","L");
+       leg->AddEntry(hC_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cC3=new TCanvas("cC3","cC3",1500,1500);
+    cC3->Divide(2,4);
+    for(int ii=16;ii<24;ii++){
+       cC3->cd(ii-15);
+       Double_t n1 = hC_laseron[ii]->GetEntries();
+       Double_t n2 = hC_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hC_laseron[ii]->GetMean();
+	   Double_t mean_off = hC_laseroff[ii]->GetMean();
+       hC_laseron[ii]->Draw();
+       //hC_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hC_laseron[ii]->SetTitle(Form("plane C chan %d; cnts/Q;",nstrip[ii]));
+
+       hC_laseroff[ii]->Draw("same");
+       hC_laseroff[ii]->Scale(n1/n2);
+       hC_laseroff[ii]->SetLineColor(2); 
+       hC_laseroff[ii]->SetLineWidth(2);
+       hC_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hC_laseron[ii],"laser on","L");
+       leg->AddEntry(hC_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cC4=new TCanvas("cC4","cC4",1500,1500);
+    cC4->Divide(2,4);
+    for(int ii=24;ii<32;ii++){
+       cC4->cd(ii-23);
+       Double_t n1 = hC_laseron[ii]->GetEntries();
+       Double_t n2 = hC_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hC_laseron[ii]->GetMean();
+	   Double_t mean_off = hC_laseroff[ii]->GetMean();
+       hC_laseron[ii]->Draw();
+       //hC_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hC_laseron[ii]->SetTitle(Form("plane C chan %d; cnts/Q;",nstrip[ii]));
+
+       hC_laseroff[ii]->Draw("same");
+       hC_laseroff[ii]->Scale(n1/n2);
+       hC_laseroff[ii]->SetLineColor(2); 
+       hC_laseroff[ii]->SetLineWidth(2);
+       hC_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hC_laseron[ii],"laser on","L");
+       leg->AddEntry(hC_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cC5=new TCanvas("cC5","cC5",1500,1500);
+    cC5->Divide(2,4);
+    for(int ii=32;ii<40;ii++){
+       cC5->cd(ii-31);
+       Double_t n1 = hC_laseron[ii]->GetEntries();
+       Double_t n2 = hC_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hC_laseron[ii]->GetMean();
+	   Double_t mean_off = hC_laseroff[ii]->GetMean();
+       hC_laseron[ii]->Draw();
+       //hC_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hC_laseron[ii]->SetTitle(Form("plane C chan %d; cnts/Q;",nstrip[ii]));
+
+       hC_laseroff[ii]->Draw("same");
+       hC_laseroff[ii]->Scale(n1/n2);
+       hC_laseroff[ii]->SetLineColor(2); 
+       hC_laseroff[ii]->SetLineWidth(2);
+       hC_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hC_laseron[ii],"laser on","L");
+       leg->AddEntry(hC_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cC6=new TCanvas("cC6","cC6",1500,1500);
+    cC6->Divide(2,4);
+    for(int ii=40;ii<43;ii++){
+       cC6->cd(ii-39);
+       Double_t n1 = hC_laseron[ii]->GetEntries();
+       Double_t n2 = hC_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hC_laseron[ii]->GetMean();
+	   Double_t mean_off = hC_laseroff[ii]->GetMean();
+       hC_laseron[ii]->Draw();
+       //hC_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hC_laseron[ii]->SetTitle(Form("plane C chan %d; cnts/Q;",nstrip[ii]));
+
+       hC_laseroff[ii]->Draw("same");
+       hC_laseroff[ii]->Scale(n1/n2);
+       hC_laseroff[ii]->SetLineColor(2); 
+       hC_laseroff[ii]->SetLineWidth(2);
+       hC_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hC_laseron[ii],"laser on","L");
+       leg->AddEntry(hC_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+   cC1->Print("C_striprate.pdf[");
+   cC1->Print("C_striprate.pdf");
+   cC2->Print("C_striprate.pdf");
+   cC3->Print("C_striprate.pdf");
+   cC4->Print("C_striprate.pdf");
+   cC5->Print("C_striprate.pdf");
+   cC6->Print("C_striprate.pdf");
+   cC6->Print("C_striprate.pdf]");
+
+
+    TCanvas *cD1=new TCanvas("cD1","cD1",1500,1500);
+    cD1->Divide(2,4);
+    for(int ii=0;ii<8;ii++){
+       cD1->cd(ii+1);
+       Double_t n1 = hD_laseron[ii]->GetEntries();
+       Double_t n2 = hD_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hD_laseron[ii]->GetMean();
+	   Double_t mean_off = hD_laseroff[ii]->GetMean();
+       hD_laseron[ii]->Draw();
+       //hD_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hD_laseron[ii]->SetTitle(Form("plane D chan %d; cnts/Q;",nstrip[ii]));
+
+       hD_laseroff[ii]->Draw("same");
+       hD_laseroff[ii]->Scale(n1/n2);
+       hD_laseroff[ii]->SetLineColor(2); 
+       hD_laseroff[ii]->SetLineWidth(2);
+       hD_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hD_laseron[ii],"laser on","L");
+       leg->AddEntry(hD_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cD2=new TCanvas("cD2","cD2",1500,1500);
+    cD2->Divide(2,4);
+    for(int ii=8;ii<16;ii++){
+       cD2->cd(ii-7);
+       Double_t n1 = hD_laseron[ii]->GetEntries();
+       Double_t n2 = hD_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hD_laseron[ii]->GetMean();
+	   Double_t mean_off = hD_laseroff[ii]->GetMean();
+       hD_laseron[ii]->Draw();
+       //hD_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hD_laseron[ii]->SetTitle(Form("plane D chan %d; cnts/Q;",nstrip[ii]));
+
+       hD_laseroff[ii]->Draw("same");
+       hD_laseroff[ii]->Scale(n1/n2);
+       hD_laseroff[ii]->SetLineColor(2); 
+       hD_laseroff[ii]->SetLineWidth(2);
+       hD_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hD_laseron[ii],"laser on","L");
+       leg->AddEntry(hD_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cD3=new TCanvas("cD3","cD3",1500,1500);
+    cD3->Divide(2,4);
+    for(int ii=16;ii<24;ii++){
+       cD3->cd(ii-15);
+       Double_t n1 = hD_laseron[ii]->GetEntries();
+       Double_t n2 = hD_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hD_laseron[ii]->GetMean();
+	   Double_t mean_off = hD_laseroff[ii]->GetMean();
+       hD_laseron[ii]->Draw();
+       //hD_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hD_laseron[ii]->SetTitle(Form("plane D chan %d; cnts/Q;",nstrip[ii]));
+
+       hD_laseroff[ii]->Draw("same");
+       hD_laseroff[ii]->Scale(n1/n2);
+       hD_laseroff[ii]->SetLineColor(2); 
+       hD_laseroff[ii]->SetLineWidth(2);
+       hD_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hD_laseron[ii],"laser on","L");
+       leg->AddEntry(hD_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cD4=new TCanvas("cD4","cD4",1500,1500);
+    cD4->Divide(2,4);
+    for(int ii=24;ii<32;ii++){
+       cD4->cd(ii-23);
+       Double_t n1 = hD_laseron[ii]->GetEntries();
+       Double_t n2 = hD_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hD_laseron[ii]->GetMean();
+	   Double_t mean_off = hD_laseroff[ii]->GetMean();
+       hD_laseron[ii]->Draw();
+       //hD_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hD_laseron[ii]->SetTitle(Form("plane D chan %d; cnts/Q;",nstrip[ii]));
+
+       hD_laseroff[ii]->Draw("same");
+       hD_laseroff[ii]->Scale(n1/n2);
+       hD_laseroff[ii]->SetLineColor(2); 
+       hD_laseroff[ii]->SetLineWidth(2);
+       hD_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hD_laseron[ii],"laser on","L");
+       leg->AddEntry(hD_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cD5=new TCanvas("cD5","cD5",1500,1500);
+    cD5->Divide(2,4);
+    for(int ii=32;ii<40;ii++){
+       cD5->cd(ii-31);
+       Double_t n1 = hD_laseron[ii]->GetEntries();
+       Double_t n2 = hD_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hD_laseron[ii]->GetMean();
+	   Double_t mean_off = hD_laseroff[ii]->GetMean();
+       hD_laseron[ii]->Draw();
+       //hD_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hD_laseron[ii]->SetTitle(Form("plane D chan %d; cnts/Q;",nstrip[ii]));
+
+       hD_laseroff[ii]->Draw("same");
+       hD_laseroff[ii]->Scale(n1/n2);
+       hD_laseroff[ii]->SetLineColor(2); 
+       hD_laseroff[ii]->SetLineWidth(2);
+       hD_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hD_laseron[ii],"laser on","L");
+       leg->AddEntry(hD_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+    TCanvas *cD6=new TCanvas("cD6","cD6",1500,1500);
+    cD6->Divide(2,4);
+    for(int ii=40;ii<43;ii++){
+       cD6->cd(ii-39);
+       Double_t n1 = hD_laseron[ii]->GetEntries();
+       Double_t n2 = hD_laseroff[ii]->GetEntries();
+	   Double_t mean_on = hD_laseron[ii]->GetMean();
+	   Double_t mean_off = hD_laseroff[ii]->GetMean();
+       hD_laseron[ii]->Draw();
+       //hD_laseroff[ii]->GetXaxis()->SetRangeUser(0,400);
+       hD_laseron[ii]->SetTitle(Form("plane D chan %d; cnts/Q;",nstrip[ii]));
+
+       hD_laseroff[ii]->Draw("same");
+       hD_laseroff[ii]->Scale(n1/n2);
+       hD_laseroff[ii]->SetLineColor(2); 
+       hD_laseroff[ii]->SetLineWidth(2);
+       hD_laseroff[ii]->SetLineWidth(2);
+    
+       auto leg = new TLegend(0.6,0.6,0.75,0.75);
+       leg->AddEntry(hD_laseron[ii],"laser on","L");
+       leg->AddEntry(hD_laseroff[ii],"laser off","L");
+       leg->SetMargin(0.5);
+       leg->Draw();
+
+
+       TLatex latex;
+       latex.SetNDC();
+       latex.SetTextSize(0.05);
+       //latex.SetTextAlign(12);
+       latex.DrawLatex(0.6,0.5,Form("Mean(laser on)=%.2lf",mean_on));
+       latex.DrawLatex(0.6,0.45,Form("Mean (laser off)=%.2lf",mean_off));
+    }   
+
+   cD1->Print("D_striprate.pdf[");
+   cD1->Print("D_striprate.pdf");
+   cD2->Print("D_striprate.pdf");
+   cD3->Print("D_striprate.pdf");
+   cD4->Print("D_striprate.pdf");
+   cD5->Print("D_striprate.pdf");
+   cD6->Print("D_striprate.pdf");
+   cD6->Print("D_striprate.pdf]");
+
+
+
+
+*/
+
+
 }
