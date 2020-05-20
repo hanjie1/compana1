@@ -65,6 +65,10 @@ Int_t BPM2BX_m;                       // BPM2B X-
 Int_t BPM2BY_p;                       // BPM2B Y+
 Int_t BPM2BY_m;                       // BPM2B Y-
 
+/***  Tree Beam variables  ***/
+Int_t curBCM;						 // update the bcm for each event according to the VTP scaler data
+Int_t curCavPower;				     // update the cavity power for each event according to the VTP scaler data
+
 /***  VTP tree variables ***/
 ULong64_t vtp_trigtime;				 // vtp trigger time
 Int_t vtp_A_scalcnt[VETROC_NCHAN];   // vtp helicity based scaler eplane A strip counts
@@ -89,3 +93,7 @@ Int_t vtp_helicity;				     // the most recent helicity in vtp_past_hel[0] bit 0
 Int_t vtp_BCM;						 // BCM from VTP scaler
 Int_t vtp_CavPower;				     // Cavity Power from VTP scaler
 Int_t cur_hel;				         // helicty after the delay is removed same as "current_helicity"
+Int_t scalcntA[VETROC_NCHAN];        // vtp helicity based scaler plane A strips coutns
+Int_t scalcntB[VETROC_NCHAN];        // vtp helicity based scaler plane B strips coutns
+Int_t scalcntC[VETROC_NCHAN];        // vtp helicity based scaler plane C strips coutns
+Int_t scalcntD[VETROC_NCHAN];        // vtp helicity based scaler plane D strips coutns

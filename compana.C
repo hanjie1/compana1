@@ -19,6 +19,7 @@
 #include "VETROCDecode.h"
 #include "VTPDecode.h"
 #include "FindHelicity.h"
+#include "UpdateTree.h"
 
 using namespace std;
 
@@ -145,6 +146,10 @@ int main ()
   VTPScal->Branch("vtp_BCM",&vtp_BCM,"vtp_BCM/I");
   VTPScal->Branch("vtp_CavPower",&vtp_CavPower,"vtp_CavPower/I");
   VTPScal->Branch("cur_hel", &cur_hel, "cur_hel/I"); 
+  VTPScal->Branch("scalcntA",scalcntA, Form("scalcntA[%d]/I",VETROC_NCHAN));
+  VTPScal->Branch("scalcntB",scalcntB, Form("scalcntB[%d]/I",VETROC_NCHAN));
+  VTPScal->Branch("scalcntC",scalcntC, Form("scalcntC[%d]/I",VETROC_NCHAN));
+  VTPScal->Branch("scalcntD",scalcntD, Form("scalcntD[%d]/I",VETROC_NCHAN));
 
 
   nevents=1;
@@ -277,7 +282,7 @@ int main ()
 	  unsigned long long *simpTrigBuf1 = NULL;
 	  tbLen1 = simpleGetTriggerBankTimeSegment(&simpTrigBuf1);
 	  ULong64_t fevtNum = simpTrigBuf1[0];
-	  if(fevtNum != nevents) printf("The event number from TI does not match the counter !\n");
+	  if(fevtNum != nevents) printf("The event number %llu from TI does not match the counter %llu !\n",fevtNum,nevents);
 
 	  if(verbose)printf("Event number for the first event in the block = %llu \n",fevtNum);
 
@@ -472,8 +477,20 @@ int main ()
 			   vtp_BCM = 0;
 			   vtp_CavPower = 0;
 			   cur_hel = -1;
+			   for(int aa=0;aa<VETROC_NCHAN;aa++){
+				 scalcntA[aa]=0;
+				 scalcntB[aa]=0;
+				 scalcntC[aa]=0;
+				 scalcntD[aa]=0;
+			   }
 			   VTPScal->Fill();
 		    }
+			for(int aa=0; aa<VETROC_NCHAN;aa++){
+				scalcntA[aa] = vtp_A_scalcnt[aa];
+				scalcntB[aa] = vtp_B_scalcnt[aa];
+				scalcntC[aa] = vtp_C_scalcnt[aa];
+				scalcntD[aa] = vtp_D_scalcnt[aa];
+			}
 		    vtp_BCM = vtp_scaldat[15];
 		    vtp_CavPower = vtp_scaldat[12];
 			cur_hel = last_win_helicity;
@@ -530,6 +547,8 @@ int main ()
   VTPScal->Write(); 
   hfile->Close(); 
  // evClose(handle);
+
+  UpdateTree(outfile);
 
   exit(0);
 

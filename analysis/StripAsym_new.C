@@ -109,148 +109,70 @@ void StripAsym(){
 
 cout<<NQminus_on[0]<<"  "<<NQplus_on[0]<<endl;
 
-	 TGraphErrors *gA_on[8];
-	 TGraphErrors *gA_off[8];
-	 TGraphErrors *gB_on[8];
-	 TGraphErrors *gB_off[8];
-	 TGraphErrors *gC_on[8];
-	 TGraphErrors *gC_off[8];
-	 TGraphErrors *gD_on[8];
-	 TGraphErrors *gD_off[8];
+	 TGraph *gA_on[8];
+	 TGraph *gA_off[8];
+	 TGraph *gB_on[8];
+	 TGraph *gB_off[8];
+	 TGraph *gC_on[8];
+	 TGraph *gC_off[8];
+	 TGraph *gD_on[8];
+	 TGraph *gD_off[8];
 
 	 for(int ii=0;ii<8;ii++){
-		gA_on[ii] = new TGraphErrors();
-		gA_off[ii] = new TGraphErrors();
-	
+		gA_on[ii] = new TGraph();
+		gA_off[ii] = new TGraph();
+		
 		for(int jj=0; jj<128; jj++){
-	      Double_t tmpPlus_on = NplusA_on[ii][jj]/NQplus_on[ii];
-	      Double_t tmpMinus_on = NminusA_on[ii][jj]/NQminus_on[ii];
-	      Double_t tmpPlus_off = NplusA_off[ii][jj]/NQplus_off[ii];
-	      Double_t tmpMinus_off = NminusA_off[ii][jj]/NQminus_off[ii];
-
-		  Double_t tmpPlus_on_err = sqrt(NplusA_on[ii][jj])/NQplus_on[ii];
-		  Double_t tmpPlus_off_err = sqrt(NplusA_off[ii][jj])/NQplus_off[ii];
-		  Double_t tmpMinus_on_err = sqrt(NminusA_on[ii][jj])/NQminus_on[ii];
-		  Double_t tmpMinus_off_err = sqrt(NminusA_off[ii][jj])/NQminus_off[ii];
-
 		  Double_t asym_on=0, asym_off=0;
-		  Double_t asym_on_err=0, asym_off_err=0;
-		  if((NplusA_on[ii][jj]+NminusA_on[ii][jj])!=0) {
-			asym_on = (tmpPlus_on - tmpMinus_on)/(tmpPlus_on + tmpMinus_on);
-			asym_on_err = 2.0/pow(tmpPlus_on+tmpMinus_on,2) * sqrt(pow(tmpMinus_on*tmpPlus_on_err,2) + pow(tmpPlus_on*tmpMinus_on_err,2));	
-		  }
-		  if((NplusA_off[ii][jj]+NminusA_off[ii][jj])!=0) {
-			asym_off = (tmpPlus_off - tmpMinus_off)/(tmpPlus_off + tmpMinus_off);
-			asym_off_err = 2.0/pow(tmpPlus_off+tmpMinus_off,2) * sqrt(pow(tmpMinus_off*tmpPlus_off_err,2) + pow(tmpPlus_off*tmpMinus_off_err,2));	
-		  }
+		  if((NplusA_on[ii][jj]+NminusA_on[ii][jj])!=0) asym_on = (NplusA_on[ii][jj]/NQplus_on[ii]-NminusA_on[ii][jj]/NQminus_on[ii])/(NplusA_on[ii][jj]/NQplus_on[ii]+NminusA_on[ii][jj]/NQminus_on[ii]);
+		  if((NplusA_off[ii][jj]+NminusA_off[ii][jj])!=0) asym_off = (NplusA_off[ii][jj]/NQplus_off[ii]-NminusA_off[ii][jj]/NQminus_off[ii])/(NplusA_off[ii][jj]/NQplus_off[ii]+NminusA_off[ii][jj]/NQminus_off[ii]);
 
 		  gA_on[ii]->SetPoint(jj,jj,asym_on);
-		  gA_on[ii]->SetPointError(jj,0,asym_on_err);
 		  gA_off[ii]->SetPoint(jj,jj,asym_off);
-		  gA_off[ii]->SetPointError(jj,0,asym_off_err);
 		}
 	 }
 
 	 for(int ii=0;ii<8;ii++){
-		gB_on[ii] = new TGraphErrors();
-		gB_off[ii] = new TGraphErrors();
-	
+		gB_on[ii] = new TGraph();
+		gB_off[ii] = new TGraph();
+		
 		for(int jj=0; jj<128; jj++){
-	      Double_t tmpPlus_on = NplusB_on[ii][jj]/NQplus_on[ii];
-	      Double_t tmpMinus_on = NminusB_on[ii][jj]/NQminus_on[ii];
-	      Double_t tmpPlus_off = NplusB_off[ii][jj]/NQplus_off[ii];
-	      Double_t tmpMinus_off = NminusB_off[ii][jj]/NQminus_off[ii];
-
-		  Double_t tmpPlus_on_err = sqrt(NplusB_on[ii][jj])/NQplus_on[ii];
-		  Double_t tmpPlus_off_err = sqrt(NplusB_off[ii][jj])/NQplus_off[ii];
-		  Double_t tmpMinus_on_err = sqrt(NminusB_on[ii][jj])/NQminus_on[ii];
-		  Double_t tmpMinus_off_err = sqrt(NminusB_off[ii][jj])/NQminus_off[ii];
-
 		  Double_t asym_on=0, asym_off=0;
-		  Double_t asym_on_err=0, asym_off_err=0;
-		  if((NplusB_on[ii][jj]+NminusB_on[ii][jj])!=0) {
-			asym_on = (tmpPlus_on - tmpMinus_on)/(tmpPlus_on + tmpMinus_on);
-			asym_on_err = 2.0/pow(tmpPlus_on+tmpMinus_on,2) * sqrt(pow(tmpMinus_on*tmpPlus_on_err,2) + pow(tmpPlus_on*tmpMinus_on_err,2));	
-		  }
-		  if((NplusB_off[ii][jj]+NminusB_off[ii][jj])!=0) {
-			asym_off = (tmpPlus_off - tmpMinus_off)/(tmpPlus_off + tmpMinus_off);
-			asym_off_err = 2.0/pow(tmpPlus_off+tmpMinus_off,2) * sqrt(pow(tmpMinus_off*tmpPlus_off_err,2) + pow(tmpPlus_off*tmpMinus_off_err,2));	
-		  }
+		  if((NplusB_on[ii][jj]+NminusB_on[ii][jj])!=0) asym_on = (NplusB_on[ii][jj]/NQplus_on[ii]-NminusB_on[ii][jj]/NQminus_on[ii])/(NplusB_on[ii][jj]/NQplus_on[ii]+NminusB_on[ii][jj]/NQminus_on[ii]);
+		  if((NplusB_off[ii][jj]+NminusB_off[ii][jj])!=0) asym_off = (NplusB_off[ii][jj]/NQplus_off[ii]-NminusB_off[ii][jj]/NQminus_off[ii])/(NplusB_off[ii][jj]/NQplus_off[ii]+NminusB_off[ii][jj]/NQminus_off[ii]);
 
 		  gB_on[ii]->SetPoint(jj,jj,asym_on);
-		  gB_on[ii]->SetPointError(jj,0,asym_on_err);
 		  gB_off[ii]->SetPoint(jj,jj,asym_off);
-		  gB_off[ii]->SetPointError(jj,0,asym_off_err);
 		}
 	 }
 
 	 for(int ii=0;ii<8;ii++){
-		gC_on[ii] = new TGraphErrors();
-		gC_off[ii] = new TGraphErrors();
-	
+		gC_on[ii] = new TGraph();
+		gC_off[ii] = new TGraph();
+		
 		for(int jj=0; jj<128; jj++){
-	      Double_t tmpPlus_on = NplusC_on[ii][jj]/NQplus_on[ii];
-	      Double_t tmpMinus_on = NminusC_on[ii][jj]/NQminus_on[ii];
-	      Double_t tmpPlus_off = NplusC_off[ii][jj]/NQplus_off[ii];
-	      Double_t tmpMinus_off = NminusC_off[ii][jj]/NQminus_off[ii];
-
-		  Double_t tmpPlus_on_err = sqrt(NplusC_on[ii][jj])/NQplus_on[ii];
-		  Double_t tmpPlus_off_err = sqrt(NplusC_off[ii][jj])/NQplus_off[ii];
-		  Double_t tmpMinus_on_err = sqrt(NminusC_on[ii][jj])/NQminus_on[ii];
-		  Double_t tmpMinus_off_err = sqrt(NminusC_off[ii][jj])/NQminus_off[ii];
-
 		  Double_t asym_on=0, asym_off=0;
-		  Double_t asym_on_err=0, asym_off_err=0;
-		  if((NplusC_on[ii][jj]+NminusC_on[ii][jj])!=0) {
-			asym_on = (tmpPlus_on - tmpMinus_on)/(tmpPlus_on + tmpMinus_on);
-			asym_on_err = 2.0/pow(tmpPlus_on+tmpMinus_on,2) * sqrt(pow(tmpMinus_on*tmpPlus_on_err,2) + pow(tmpPlus_on*tmpMinus_on_err,2));	
-		  }
-		  if((NplusC_off[ii][jj]+NminusC_off[ii][jj])!=0) {
-			asym_off = (tmpPlus_off - tmpMinus_off)/(tmpPlus_off + tmpMinus_off);
-			asym_off_err = 2.0/pow(tmpPlus_off+tmpMinus_off,2) * sqrt(pow(tmpMinus_off*tmpPlus_off_err,2) + pow(tmpPlus_off*tmpMinus_off_err,2));	
-		  }
+		  if((NplusC_on[ii][jj]+NminusC_on[ii][jj])!=0) asym_on = (NplusC_on[ii][jj]/NQplus_on[ii]-NminusC_on[ii][jj]/NQminus_on[ii])/(NplusC_on[ii][jj]/NQplus_on[ii]+NminusC_on[ii][jj]/NQminus_on[ii]);
+		  if((NplusC_off[ii][jj]+NminusC_off[ii][jj])!=0) asym_off = (NplusC_off[ii][jj]/NQplus_off[ii]-NminusC_off[ii][jj]/NQminus_off[ii])/(NplusC_off[ii][jj]/NQplus_off[ii]+NminusC_off[ii][jj]/NQminus_off[ii]);
 
 		  gC_on[ii]->SetPoint(jj,jj,asym_on);
-		  gC_on[ii]->SetPointError(jj,0,asym_on_err);
 		  gC_off[ii]->SetPoint(jj,jj,asym_off);
-		  gC_off[ii]->SetPointError(jj,0,asym_off_err);
 		}
 	 }
 
 	 for(int ii=0;ii<8;ii++){
-		gD_on[ii] = new TGraphErrors();
-		gD_off[ii] = new TGraphErrors();
-	
+		gD_on[ii] = new TGraph();
+		gD_off[ii] = new TGraph();
+		
 		for(int jj=0; jj<128; jj++){
-	      Double_t tmpPlus_on = NplusD_on[ii][jj]/NQplus_on[ii];
-	      Double_t tmpMinus_on = NminusD_on[ii][jj]/NQminus_on[ii];
-	      Double_t tmpPlus_off = NplusD_off[ii][jj]/NQplus_off[ii];
-	      Double_t tmpMinus_off = NminusD_off[ii][jj]/NQminus_off[ii];
-
-		  Double_t tmpPlus_on_err = sqrt(NplusD_on[ii][jj])/NQplus_on[ii];
-		  Double_t tmpPlus_off_err = sqrt(NplusD_off[ii][jj])/NQplus_off[ii];
-		  Double_t tmpMinus_on_err = sqrt(NminusD_on[ii][jj])/NQminus_on[ii];
-		  Double_t tmpMinus_off_err = sqrt(NminusD_off[ii][jj])/NQminus_off[ii];
-
 		  Double_t asym_on=0, asym_off=0;
-		  Double_t asym_on_err=0, asym_off_err=0;
-		  if((NplusD_on[ii][jj]+NminusD_on[ii][jj])!=0) {
-			asym_on = (tmpPlus_on - tmpMinus_on)/(tmpPlus_on + tmpMinus_on);
-			asym_on_err = 2.0/pow(tmpPlus_on+tmpMinus_on,2) * sqrt(pow(tmpMinus_on*tmpPlus_on_err,2) + pow(tmpPlus_on*tmpMinus_on_err,2));	
-		  }
-		  if((NplusD_off[ii][jj]+NminusD_off[ii][jj])!=0) {
-			asym_off = (tmpPlus_off - tmpMinus_off)/(tmpPlus_off + tmpMinus_off);
-			asym_off_err = 2.0/pow(tmpPlus_off+tmpMinus_off,2) * sqrt(pow(tmpMinus_off*tmpPlus_off_err,2) + pow(tmpPlus_off*tmpMinus_off_err,2));	
-		  }
+		  if((NplusD_on[ii][jj]+NminusD_on[ii][jj])!=0) asym_on = (NplusD_on[ii][jj]/NQplus_on[ii]-NminusD_on[ii][jj]/NQminus_on[ii])/(NplusD_on[ii][jj]/NQplus_on[ii]+NminusD_on[ii][jj]/NQminus_on[ii]);
+		  if((NplusD_off[ii][jj]+NminusD_off[ii][jj])!=0) asym_off = (NplusD_off[ii][jj]/NQplus_off[ii]-NminusD_off[ii][jj]/NQminus_off[ii])/(NplusD_off[ii][jj]/NQplus_off[ii]+NminusD_off[ii][jj]/NQminus_off[ii]);
 
 		  gD_on[ii]->SetPoint(jj,jj,asym_on);
-		  gD_on[ii]->SetPointError(jj,0,asym_on_err);
 		  gD_off[ii]->SetPoint(jj,jj,asym_off);
-		  gD_off[ii]->SetPointError(jj,0,asym_off_err);
 		}
 	 }
-
-
 
 	 TCanvas *c1=new TCanvas("c1","c1",1200,1200);
 	 c1->Divide(2,2);
@@ -262,12 +184,11 @@ cout<<NQminus_on[0]<<"  "<<NQplus_on[0]<<endl;
    	 gA_off[0]->SetMarkerColor(4);	 
    	 gA_off[0]->SetMarkerStyle(8);	 
    	 gA_off[0]->SetMarkerSize(1.3);	 
-	
+
 	 mg1->Add(gA_on[0]);
 	 mg1->Add(gA_off[0]);
 	 mg1->Draw("AP");
 	 mg1->SetTitle("plane A asymmetry;chan;asym");
-	 mg1->GetYaxis()->SetRangeUser(-0.04,0.04);
 
 	 auto leg1 = new TLegend(0.7,0.7,0.85,0.85);
 	 leg1->AddEntry(gA_on[0],"laser on","P");
@@ -287,7 +208,6 @@ cout<<NQminus_on[0]<<"  "<<NQplus_on[0]<<endl;
 	 mg2->Add(gB_off[0]);
 	 mg2->Draw("AP");
 	 mg2->SetTitle("plane B asymmetry;chan;asym");
-	 mg2->GetYaxis()->SetRangeUser(-0.04,0.04);
 
 	 auto leg2 = new TLegend(0.7,0.7,0.85,0.85);
 	 leg2->AddEntry(gB_on[0],"laser on","P");
@@ -307,7 +227,6 @@ cout<<NQminus_on[0]<<"  "<<NQplus_on[0]<<endl;
 	 mg3->Add(gC_off[0]);
 	 mg3->Draw("AP");
 	 mg3->SetTitle("plane C asymmetry;chan;asym");
-	 mg3->GetYaxis()->SetRangeUser(-0.04,0.04);
 
 	 auto leg3 = new TLegend(0.7,0.7,0.85,0.85);
 	 leg3->AddEntry(gC_on[0],"laser on","P");
@@ -327,7 +246,6 @@ cout<<NQminus_on[0]<<"  "<<NQplus_on[0]<<endl;
 	 mg4->Add(gD_off[0]);
 	 mg4->Draw("AP");
 	 mg4->SetTitle("plane D asymmetry;chan;asym");
-	 mg4->GetYaxis()->SetRangeUser(-0.04,0.04);
 
 	 auto leg4 = new TLegend(0.7,0.7,0.85,0.85);
 	 leg4->AddEntry(gD_on[0],"laser on","P");
@@ -354,7 +272,6 @@ cout<<NQminus_on[0]<<"  "<<NQplus_on[0]<<endl;
 	 mg6->Add(gA_off[1]);
 	 mg6->Draw("AP");
 	 mg6->SetTitle("plane A asymmetry (delay_win 7);chan;asym");
-	 mg6->GetYaxis()->SetRangeUser(-0.04,0.04);
 
 	 auto leg6 = new TLegend(0.7,0.7,0.85,0.85);
 	 leg6->AddEntry(gA_on[1],"laser on","P");
@@ -374,7 +291,6 @@ cout<<NQminus_on[0]<<"  "<<NQplus_on[0]<<endl;
 	 mg7->Add(gA_off[2]);
 	 mg7->Draw("AP");
 	 mg7->SetTitle("plane A asymmetry (delay_win 6);chan;asym");
-	 mg7->GetYaxis()->SetRangeUser(-0.04,0.04);
 
 	 auto leg7 = new TLegend(0.7,0.7,0.85,0.85);
 	 leg7->AddEntry(gA_on[2],"laser on","P");
@@ -394,7 +310,6 @@ cout<<NQminus_on[0]<<"  "<<NQplus_on[0]<<endl;
 	 mg8->Add(gA_off[3]);
 	 mg8->Draw("AP");
 	 mg8->SetTitle("plane A asymmetry (delay_win 5);chan;asym");
-	 mg8->GetYaxis()->SetRangeUser(-0.04,0.04);
 
 	 auto leg8 = new TLegend(0.7,0.7,0.85,0.85);
 	 leg8->AddEntry(gA_on[3],"laser on","P");
@@ -414,7 +329,6 @@ cout<<NQminus_on[0]<<"  "<<NQplus_on[0]<<endl;
 	 mg9->Add(gA_off[4]);
 	 mg9->Draw("AP");
 	 mg9->SetTitle("plane A asymmetry (delay_win 4);chan;asym");
-	 mg9->GetYaxis()->SetRangeUser(-0.04,0.04);
 
 	 auto leg9 = new TLegend(0.7,0.7,0.85,0.85);
 	 leg9->AddEntry(gA_on[4],"laser on","P");
@@ -434,7 +348,6 @@ cout<<NQminus_on[0]<<"  "<<NQplus_on[0]<<endl;
 	 mg10->Add(gA_off[5]);
 	 mg10->Draw("AP");
 	 mg10->SetTitle("plane A asymmetry (delay_win 3);chan;asym");
-	 mg10->GetYaxis()->SetRangeUser(-0.04,0.04);
 
 	 auto leg10 = new TLegend(0.7,0.7,0.85,0.85);
 	 leg10->AddEntry(gA_on[5],"laser on","P");
@@ -454,7 +367,6 @@ cout<<NQminus_on[0]<<"  "<<NQplus_on[0]<<endl;
 	 mg11->Add(gA_off[6]);
 	 mg11->Draw("AP");
 	 mg11->SetTitle("plane A asymmetry (delay_win 2);chan;asym");
-	 mg11->GetYaxis()->SetRangeUser(-0.04,0.04);
 
 	 auto leg11 = new TLegend(0.7,0.7,0.85,0.85);
 	 leg11->AddEntry(gA_on[6],"laser on","P");
@@ -474,18 +386,17 @@ cout<<NQminus_on[0]<<"  "<<NQplus_on[0]<<endl;
 	 mg12->Add(gA_off[7]);
 	 mg12->Draw("AP");
 	 mg12->SetTitle("plane A asymmetry (delay_win 1);chan;asym");
-	 mg12->GetYaxis()->SetRangeUser(-0.04,0.04);
 
 	 auto leg12 = new TLegend(0.7,0.7,0.85,0.85);
 	 leg12->AddEntry(gA_on[7],"laser on","P");
 	 leg12->AddEntry(gA_off[7],"laser off","P");
 	 leg12->Draw(); 
 
-
+/*
      c1->Print(Form("Asymmetry_%d.pdf[",runnumber));
      c1->Print(Form("Asymmetry_%d.pdf",runnumber));
      c5->Print(Form("Asymmetry_%d.pdf",runnumber));
      c5->Print(Form("Asymmetry_%d.pdf]",runnumber));
-
+*/
 }
 
